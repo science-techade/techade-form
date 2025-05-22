@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <title>Опросный лист по техпроцессу</title>
+  <style>
+    body { font-family: sans-serif; padding: 20px; }
+    .hidden { display: none; }
+    .block { margin-bottom: 20px; }
+    input, select, textarea { width: 100%; padding: 5px; margin-top: 5px; }
+    table { width: 100%; margin-top: 10px; border-collapse: collapse; }
+    td, th { border: 1px solid #ccc; padding: 5px; }
+  </style>
+</head>
+<body>
+
+  <h2>Опросный лист по техпроцессу</h2>
+
+  <form id="form">
+    <div class="block">
+      <label>Анализируемый материал</label>
+      <select id="material" name="material" onchange="toggleMaterialBlocks()" required>
+        <option value="">Выберите...</option>
+        <option value="шихта">Шихта</option>
+        <option value="пульпа">Пульпа</option>
+      </select>
+    </div>
+
+    <div class="block">
+      <label>Название компании</label>
+      <input type="text" name="company" required>
+    </div>
+
+    <div class="block">
+      <label>Ваше ФИО</label>
+      <input type="text" name="fio" required>
+    </div>
+
+    <div class="block">
+      <label>Ваша должность</label>
+      <input type="text" name="position">
+    </div>
+
+    <div class="block">
+      <label>Email</label>
+      <input type="email" name="email" required>
+    </div>
+
+    <div class="block">
+      <label>Телефон</label>
+      <input type="tel" name="phone">
+    </div>
+
+    <div class="block">
+      <label>Оборудование, рассматриваемое для решения задачи</label>
+      <textarea name="equipment"></textarea>
+    </div>
+
+    <div class="block">
+      <label>Конфигурация системы анализа</label>
+      <select name="analysis_config">
+        <option value="A">A) 1 анализатор и система доставки пробы</option>
+        <option value="B">B) Централизованная доставка проб</option>
+      </select>
+    </div>
+
+    <div class="block">
+      <label>Основные элементы и диапазоны (0,1–70%)</label>
+      <table id="main-elements">
+        <thead><tr><th>Элемент</th><th>Диапазон</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <button type="button" onclick="addElementRow('main-elements')">+ Добавить</button>
+    </div>
+
+    <div class="block">
+      <label>Дополнительные элементы и диапазоны (0,1–70%)</label>
+      <table id="additional-elements">
+        <thead><tr><th>Элемент</th><th>Диапазон</th><th></th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <button type="button" onclick="addElementRow('additional-elements')">+ Добавить</button>
+    </div>
+
+    <div class="block">
+      <label>Максимальное время измерения (сек)</label>
+      <input type="number" name="measuring_time">
+    </div>
+
+    <div class="block">
+      <label>Источник рентгеновского излучения</label>
+      <input type="text" name="radiation_source">
+    </div>
+
+    <div class="block">
+      <label>Температура на месте установки (°C)</label>
+      <input type="text" name="temperature_range">
+    </div>
+
+    <div class="block">
+      <label>Перепад температуры в течение года (°C)</label>
+      <input type="text" name="temperature_variation">
+    </div>
+
+    <div class="block">
+      <label>Место установки анализатора</label>
+      <textarea name="installation_place"></textarea>
+    </div>
+
+    <div class="block">
+      <label>Схема или чертеж установки (укажите путь или загрузку отдельно)</label>
+      <input type="text" name="drawing_link">
+    </div>
+
+    <button type="submit">Отправить</button>
+  </form>
+
+  <script>
+    function addElementRow(tableId) {
+      const row = document.createElement("tr");
+      row.innerHTML = `
+        <td><input type="text" name="${tableId}_element[]"></td>
+        <td><input type="text" name="${tableId}_range[]"></td>
+        <td><button type="button" onclick="this.closest('tr').remove()">✖</button></td>
+      `;
+      document.querySelector(`#${tableId} tbody`).appendChild(row);
+    }
+
+    function toggleMaterialBlocks() {
+      // Здесь можно реализовать логику отображения блоков в зависимости от "шихта/пульпа"
+    }
+
+    document.getElementById("form").addEventListener("submit", function(e) {
+      e.preventDefault();
+      alert("Форма отправлена! (интеграция с сервером — на следующем шаге)");
+    });
+  </script>
+
+</body>
+</html>
