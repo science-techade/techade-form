@@ -171,41 +171,26 @@
 
 <script>
   function addElementRow(containerId) {
-  const container = document.getElementById(containerId);
-  const row = document.createElement('div');
-  row.className = 'element-row';
-  row.innerHTML = `
-    <input type="text" name="${containerId}_element[]" placeholder="Элемент" class="form-control">
-    <input type="text" name="${containerId}_range[]" placeholder="Диапазон (%)" class="form-control">
-    <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()">✖ Удалить</button>
-  `;
-  container.appendChild(row);
-}_element[]" placeholder="Элемент" class="form-control">
-      <input type="text" name="${containerId}_range[]" placeholder="Диапазон (%)" class="form-control">
-      <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()">✖ Удалить</button>
-    `;
-    container.appendChild(row);
-  }
-  function addElementRow(containerId) {
     const container = document.getElementById(containerId);
     const row = document.createElement('div');
     row.className = 'element-row';
     row.innerHTML = `
       <input type="text" name="${containerId}_element[]" placeholder="Элемент" class="form-control">
       <input type="text" name="${containerId}_range[]" placeholder="Диапазон (%)" class="form-control">
-      <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()">✖</button>
+      <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()">✖ Удалить</button>
     `;
     container.appendChild(row);
   }
-$2
-      document.getElementById('material').addEventListener('change', function () {
-        const sections = document.querySelectorAll('.analyzer-section');
-        sections.forEach(s => s.style.display = 'none');
-        const selected = this.value;
-        const target = document.getElementById(`section-${selected}`);
-        if (target) target.style.display = 'block';
-      });
-      document.getElementById('feed_type').addEventListener('change', function () {
+
+  document.getElementById('material').addEventListener('change', function () {
+    const sections = document.querySelectorAll('.analyzer-section');
+    sections.forEach(s => s.style.display = 'none');
+    const selected = this.value;
+    const target = document.getElementById(`section-${selected}`);
+    if (target) target.style.display = 'block';
+  });
+
+  document.getElementById('feed_type').addEventListener('change', function () {
     document.getElementById('block-naporny').style.display = 'none';
     document.getElementById('block-samotek').style.display = 'none';
     if (this.value === 'naporny') {
