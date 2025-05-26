@@ -17,13 +17,24 @@
   <h2 class="mb-4">Опросный лист по техпроцессу</h2>
   <form id="form">
 
-    <div class="mb-3">
-      <label for="material" class="form-label">Анализируемый материал</label>
-      <select id="material" name="material" class="form-select" required>
-        <option value="">Выберите...</option>
-        <option value="шихта">Шихта</option>
-        <option value="пульпа">Пульпа</option>
-      </select>
+    <div class="row mb-3">
+      <div class="col-md-6">
+        <label for="material" class="form-label">Анализируемый материал</label>
+        <select id="material" name="material" class="form-select" required>
+          <option value="">Выберите...</option>
+          <option value="шихта">Шихта</option>
+          <option value="пульпа">Пульпа</option>
+        </select>
+      </div>
+      <div class="col-md-6">
+        <label for="analyzer_type" class="form-label">Тип анализатора</label>
+        <select id="analyzer_type" name="analyzer_type" class="form-select" required>
+          <option value="">Выберите...</option>
+          <option value="лазерный">Лазерный</option>
+          <option value="рентгеновский">Рентгеновский</option>
+          <option value="инфракрасный">Инфракрасный</option>
+        </select>
+      </div>
     </div>
 
     <div class="mb-3">
@@ -31,33 +42,35 @@
       <input type="text" id="company" name="company" class="form-control" required>
     </div>
 
-    <div class="mb-3">
-      <label for="fio" class="form-label">Ваше ФИО</label>
-      <input type="text" id="fio" name="fio" class="form-control" required>
+    <div class="row mb-3">
+      <div class="col-md-6">
+        <label for="fio" class="form-label">Ваше ФИО</label>
+        <input type="text" id="fio" name="fio" class="form-control" required>
+      </div>
+      <div class="col-md-6">
+        <label for="position" class="form-label">Должность</label>
+        <input type="text" id="position" name="position" class="form-control">
+      </div>
     </div>
 
-    <div class="mb-3">
-      <label for="position" class="form-label">Должность</label>
-      <input type="text" id="position" name="position" class="form-control">
-    </div>
-
-    <div class="mb-3">
-      <label for="email" class="form-label">Email</label>
-      <input type="email" id="email" name="email" class="form-control" required>
-    </div>
-
-    <div class="mb-3">
-      <label for="phone" class="form-label">Телефон</label>
-      <input type="tel" id="phone" name="phone" class="form-control">
+    <div class="row mb-3">
+      <div class="col-md-6">
+        <label for="email" class="form-label">Email</label>
+        <input type="email" id="email" name="email" class="form-control" required>
+      </div>
+      <div class="col-md-6">
+        <label for="phone" class="form-label">Телефон</label>
+        <input type="tel" id="phone" name="phone" class="form-control">
+      </div>
     </div>
 
     <div class="mb-3">
       <label for="equipment" class="form-label">Оборудование</label>
-      <textarea id="equipment" name="equipment" class="form-control" rows="3"></textarea>
+      <textarea id="equipment" name="equipment" class="form-control" rows="2"></textarea>
     </div>
 
     <div class="mb-3">
-      <label for="analysis_config" class="form-label">Конфигурация анализа</label>
+      <label for="analysis_config" class="form-label">Конфигурация системы анализа</label>
       <select id="analysis_config" name="analysis_config" class="form-select">
         <option value="A">A) Один анализатор и доставка</option>
         <option value="B">B) Централизованная доставка</option>
@@ -76,33 +89,35 @@
       <button type="button" class="btn btn-outline-secondary btn-sm" onclick="addElementRow('additional-elements')">+ Добавить</button>
     </div>
 
-    <div class="mb-3">
-      <label for="measuring_time" class="form-label">Время измерения (сек)</label>
-      <input type="number" id="measuring_time" name="measuring_time" class="form-control">
+    <div class="row mb-3">
+      <div class="col-md-6">
+        <label for="measuring_time" class="form-label">Максимальное время измерения (сек)</label>
+        <input type="number" id="measuring_time" name="measuring_time" class="form-control">
+      </div>
+      <div class="col-md-6">
+        <label for="radiation_source" class="form-label">Источник излучения</label>
+        <input type="text" id="radiation_source" name="radiation_source" class="form-control">
+      </div>
+    </div>
+
+    <div class="row mb-3">
+      <div class="col-md-6">
+        <label for="temperature_range" class="form-label">Температура установки (°C)</label>
+        <input type="text" id="temperature_range" name="temperature_range" class="form-control">
+      </div>
+      <div class="col-md-6">
+        <label for="temperature_variation" class="form-label">Перепад температуры (°C)</label>
+        <input type="text" id="temperature_variation" name="temperature_variation" class="form-control">
+      </div>
     </div>
 
     <div class="mb-3">
-      <label for="radiation_source" class="form-label">Источник излучения</label>
-      <input type="text" id="radiation_source" name="radiation_source" class="form-control">
-    </div>
-
-    <div class="mb-3">
-      <label for="temperature_range" class="form-label">Температура установки (°C)</label>
-      <input type="text" id="temperature_range" name="temperature_range" class="form-control">
-    </div>
-
-    <div class="mb-3">
-      <label for="temperature_variation" class="form-label">Перепад температуры (°C)</label>
-      <input type="text" id="temperature_variation" name="temperature_variation" class="form-control">
-    </div>
-
-    <div class="mb-3">
-      <label for="installation_place" class="form-label">Место установки</label>
+      <label for="installation_place" class="form-label">Место установки анализатора</label>
       <textarea id="installation_place" name="installation_place" class="form-control" rows="2"></textarea>
     </div>
 
     <div class="mb-3">
-      <label for="drawing_link" class="form-label">Ссылка на схему</label>
+      <label for="drawing_link" class="form-label">Ссылка на чертёж / схему установки</label>
       <input type="text" id="drawing_link" name="drawing_link" class="form-control">
     </div>
 
