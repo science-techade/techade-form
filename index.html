@@ -76,7 +76,6 @@
           <option value="samotek">Самотек</option>
         </select>
       </div>
-
       <div id="block-naporny" class="conditional-block">
         <div class="mb-3">
           <label class="form-label">Диаметр</label>
@@ -95,7 +94,6 @@
           <input type="text" name="temperature" class="form-control">
         </div>
       </div>
-
       <div id="block-samotek" class="conditional-block">
         <div class="mb-3">
           <label class="form-label">Диаметр</label>
@@ -116,9 +114,15 @@
       </div>
     </div>
 
-    <!-- остальные секции остаются без изменений -->
-
     <script>
+      document.getElementById('material').addEventListener('change', function () {
+        const sections = document.querySelectorAll('.analyzer-section');
+        sections.forEach(s => s.style.display = 'none');
+        const selected = this.value;
+        const target = document.getElementById(`section-${selected}`);
+        if (target) target.style.display = 'block';
+      });
+
       document.getElementById('feed_type').addEventListener('change', function () {
         document.getElementById('block-naporny').style.display = 'none';
         document.getElementById('block-samotek').style.display = 'none';
@@ -129,3 +133,9 @@
         }
       });
     </script>
+
+  </form>
+</div>
+
+</body>
+</html>
