@@ -9,7 +9,7 @@
     .element-row { display: flex; gap: 10px; margin-bottom: 10px; }
     .element-row input { flex: 1; }
     .element-row button { white-space: nowrap; }
-    .analyzer-section { display: none; margin-top: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 5px; background-color: #f9f9f9; }
+    .analyzer-section, .conditional-block { display: none; margin-top: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 5px; background-color: #f9f9f9; }
   </style>
 </head>
 <body>
@@ -21,37 +21,30 @@
     <!-- Основные сведения -->
     <div class="mb-4">
       <h5>Основные сведения</h5>
-
       <div class="mb-3">
         <label for="date" class="form-label">Дата заполнения опросного листа</label>
         <input type="date" id="date" name="date" class="form-control" required>
       </div>
-
       <div class="mb-3">
         <label for="company" class="form-label">Название компании</label>
         <input type="text" id="company" name="company" class="form-control" required>
       </div>
-
       <div class="mb-3">
         <label for="contact_person" class="form-label">Контактное лицо</label>
         <input type="text" id="contact_person" name="contact_person" class="form-control">
       </div>
-
       <div class="mb-3">
         <label for="phone" class="form-label">Телефон</label>
         <input type="tel" id="phone" name="phone" class="form-control">
       </div>
-
       <div class="mb-3">
         <label for="email" class="form-label">Email</label>
         <input type="email" id="email" name="email" class="form-control">
       </div>
-
       <div class="mb-3">
         <label for="country" class="form-label">Страна</label>
         <input type="text" id="country" name="country" class="form-control">
       </div>
-
       <div class="mb-3">
         <label for="location" class="form-label">Местонахождение</label>
         <input type="text" id="location" name="location" class="form-control">
@@ -72,13 +65,56 @@
     <div id="section-pulp" class="analyzer-section">
       <h5>Пульпа: параметры для 1–3 потоков</h5>
       <div class="mb-3">
-        <label for="streams" class="form-label">Количество потоков</label>
-        <input type="number" class="form-control" name="streams">
+        <label class="form-label">Количество точек для анализа</label>
+        <input type="number" name="streams" class="form-control">
       </div>
       <div class="mb-3">
-        <label class="form-label">Основные элементы</label>
-        <div id="main-elements"></div>
-        <button type="button" class="btn btn-outline-primary btn-sm" onclick="addElementRow('main-elements')">+ Добавить</button>
+        <label class="form-label">Характеристика подачи питания</label>
+        <select name="feed_type" id="feed_type" class="form-select">
+          <option value="">Выберите...</option>
+          <option value="naporny">Напорный</option>
+          <option value="samotek">Самотек</option>
+        </select>
+      </div>
+
+      <!-- Напорный блок -->
+      <div id="block-naporny" class="conditional-block">
+        <div class="mb-3">
+          <label class="form-label">Диаметр</label>
+          <input type="text" name="naporny_diameter" class="form-control">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Материал (нерж. сталь, резиновая футеровка и т.д.)</label>
+          <input type="text" name="naporny_material" class="form-control">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Давление нагнетания (кПа)</label>
+          <input type="text" name="pressure" class="form-control">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Температура окружающей среды (мин/макс)</label>
+          <input type="text" name="temperature" class="form-control">
+        </div>
+      </div>
+
+      <!-- Самотек блок -->
+      <div id="block-samotek" class="conditional-block">
+        <div class="mb-3">
+          <label class="form-label">Диаметр</label>
+          <input type="text" name="samotek_diameter" class="form-control">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Материал (нерж. сталь, резиновая футеровка и т.д.)</label>
+          <input type="text" name="samotek_material" class="form-control">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Угол разгрузки (в градусах)</label>
+          <input type="text" name="unload_angle" class="form-control">
+        </div>
+        <div class="mb-3">
+          <label class="form-label">Температура окружающей среды (мин/макс)</label>
+          <input type="text" name="temperature2" class="form-control">
+        </div>
       </div>
     </div>
 
@@ -129,6 +165,16 @@
     const selected = this.value;
     const target = document.getElementById(`section-${selected}`);
     if (target) target.style.display = 'block';
+  });
+
+  document.getElementById('feed_type').addEventListener('change', function () {
+    document.getElementById('block-naporny').style.display = 'none';
+    document.getElementById('block-samotek').style.display = 'none';
+    if (this.value === 'naporny') {
+      document.getElementById('block-naporny').style.display = 'block';
+    } else if (this.value === 'samotek') {
+      document.getElementById('block-samotek').style.display = 'block';
+    }
   });
 </script>
 
