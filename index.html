@@ -125,9 +125,11 @@
   <div id="elements-ca-u"></div>
   <button type="button" class="btn btn-outline-primary btn-sm" onclick="addElementRow('elements-ca-u')">+ Добавить элемент</button>
 </div>
-
-$1
-    <input type="text" name="light_elements" class="form-control">
+    <div class="mb-3">
+  <h5>Анализ легких химических элементов</h5>
+  <div id="light-elements"></div>
+  <button type="button" class="btn btn-outline-primary btn-sm" onclick="addElementRow('light-elements')">+ Добавить элемент</button>
+</div>
   </div>
   <div class="mb-3">
     <label class="form-label">Плотность</label>
@@ -169,11 +171,16 @@ $1
 
 <script>
   function addElementRow(containerId) {
-    const container = document.getElementById(containerId);
-    const row = document.createElement('div');
-    row.className = 'element-row';
-    row.innerHTML = `
-      <input type="text" name="${containerId}_element[]" placeholder="Элемент" class="form-control">
+  const container = document.getElementById(containerId);
+  const row = document.createElement('div');
+  row.className = 'element-row';
+  row.innerHTML = `
+    <input type="text" name="${containerId}_element[]" placeholder="Элемент" class="form-control">
+    <input type="text" name="${containerId}_range[]" placeholder="Диапазон (%)" class="form-control">
+    <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()">✖ Удалить</button>
+  `;
+  container.appendChild(row);
+}_element[]" placeholder="Элемент" class="form-control">
       <input type="text" name="${containerId}_range[]" placeholder="Диапазон (%)" class="form-control">
       <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()">✖ Удалить</button>
     `;
@@ -190,7 +197,7 @@ $1
     `;
     container.appendChild(row);
   }
-
+$2
       document.getElementById('material').addEventListener('change', function () {
         const sections = document.querySelectorAll('.analyzer-section');
         sections.forEach(s => s.style.display = 'none');
