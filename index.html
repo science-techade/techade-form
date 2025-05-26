@@ -53,61 +53,77 @@
 
     <!-- Выпадающий список выбора материала -->
     <div class="mb-3">
-  <label for="material" class="form-label">Тип анализируемого материала</label>
-  <select id="material" name="material" class="form-select" required>
-    <option value="">Выберите...</option>
-    <option value="pulp">Пульпа (1–3 потока для анализа)</option>
-    <option value="sinter">Шихта / руда</option>
-    <option value="multiplex">Пульпа с мультиплексором</option>
-    <option value="courier">Пульпа с мультиплексором (на замену анализатора Курьер)</option>
-  </select>
-</div>
+      <label for="material" class="form-label">Тип анализируемого материала</label>
+      <select id="material" name="material" class="form-select" required>
+        <option value="">Выберите...</option>
+        <option value="pulp">Пульпа (1–3 потока для анализа)</option>
+        <option value="sinter">Шихта / руда</option>
+        <option value="multiplex">Пульпа с мультиплексором</option>
+        <option value="courier">Пульпа с мультиплексором (на замену анализатора Курьер)</option>
+      </select>
+    </div>
 
-<div id="section-sinter" class="analyzer-section">
-  <h5>Шихта / руда: оборудование</h5>
+    <!-- Секции динамически отображаются здесь -->
+    <div id="section-pulp" class="analyzer-section">
+  <h5>Пульпа: оборудование</h5>
   <div class="mb-3">
-    <label class="form-label">Рассматриваются анализаторы</label>
-    <select name="analyzer_type" class="form-select">
+    <label class="form-label">Количество точек для анализа</label>
+    <input type="number" name="streams" class="form-control">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Характеристика подачи питания</label>
+    <select name="feed_type" id="feed_type" class="form-select">
       <option value="">Выберите...</option>
-      <option value="arp-1c">АРП-1Ц</option>
-      <option value="arp-2c">АРП-2Ц</option>
+      <option value="naporny">Напорный</option>
+      <option value="samotek">Самотек</option>
     </select>
   </div>
   <div class="mb-3">
-    <label class="form-label">Скорость ленты (м/с)</label>
-    <input type="text" name="belt_speed" class="form-control">
+    <label class="form-label">Диаметр</label>
+    <input type="text" name="pulp_diameter" class="form-control">
   </div>
   <div class="mb-3">
-    <label class="form-label">Нагрузка на ленте (тонн/час, мин/макс)</label>
-    <input type="text" name="belt_load" class="form-control">
+    <label class="form-label">Материал (нерж. сталь, резиновая футеровка и т.д.)</label>
+    <input type="text" name="pulp_material" class="form-control">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Давление нагнетания / Угол разгрузки</label>
+    <input type="text" name="pulp_pressure_angle" class="form-control">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Температура окружающей среды (мин/макс)</label>
+    <input type="text" name="pulp_temperature" class="form-control">
   </div>
   <div class="mb-3">
     <h5>Анализируемые элементы от Ca до U + диапазон концентраций</h5>
-    <div id="sinter-elements-ca-u"></div>
-    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addElementRow('sinter-elements-ca-u')">+ Добавить элемент</button>
+    <div id="elements-ca-u"></div>
+    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addElementRow('elements-ca-u')">+ Добавить элемент</button>
   </div>
   <div class="mb-3">
-    <label class="form-label">Размер кусков (макс/сред), мм</label>
-    <input type="text" name="sinter_grain_size" class="form-control">
+    <h5>Анализ легких химических элементов</h5>
+    <div id="light-elements"></div>
+    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addElementRow('light-elements')">+ Добавить элемент</button>
   </div>
   <div class="mb-3">
     <label class="form-label">Плотность</label>
-    <input type="text" name="sinter_density" class="form-control">
+    <input type="text" name="pulp_density" class="form-control">
   </div>
   <div class="mb-3">
     <label class="form-label">Время измерения (мин/сред/макс), сек</label>
-    <input type="text" name="sinter_measurement_time" class="form-control">
+    <input type="text" name="pulp_measurement_time" class="form-control">
   </div>
   <div class="mb-3">
-    <label class="form-label">Наличие тяжёлых металлов в шихте</label>
-    <input type="text" name="sinter_heavy_metals" class="form-control">
+    <label class="form-label">Наличие тяжёлых металлов в пульпе</label>
+    <input type="text" name="pulp_heavy_metals" class="form-control">
   </div>
-</div>
-
-    $1
-
-$1
-
+  <div class="mb-3">
+    <label class="form-label">Состав жидкой фазы</label>
+    <input type="text" name="pulp_liquid_phase" class="form-control">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Перечень используемых реагентов</label>
+    <input type="text" name="pulp_reagents" class="form-control">
+  </div>
   <div class="mb-3">
     <h5>Дополнительные условия</h5>
     <div class="form-check">
@@ -135,117 +151,72 @@ $1
       <label class="form-check-label" for="video_surveillance">Наличие видеонаблюдения</label>
     </div>
   </div>
+      <!-- Контент блока Пульпа будет сформирован из отдельных шагов -->
+    </div>
 
-<div class="mb-3">
-  <h5>Основные анализируемые элементы и диапазоны их содержаний (в границах от 0,1 до 70)</h5>
-    <div id="main-elements"></div>
-    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addElementRow('main-elements')">+ Добавить элемент</button>
-  </div>
+    <div id="section-sinter" class="analyzer-section">
+  <h5>Шихта / руда: оборудование</h5>
   <div class="mb-3">
-  <h5>Анализируемые элементы от Ca до U + диапазон концентраций</h5>
-  <div id="elements-ca-u"></div>
-  <button type="button" class="btn btn-outline-primary btn-sm" onclick="addElementRow('elements-ca-u')">+ Добавить элемент</button>
-</div>
-    <div class="mb-3">
-  <h5>Анализ легких химических элементов</h5>
-  <div id="light-elements"></div>
-  <button type="button" class="btn btn-outline-primary btn-sm" onclick="addElementRow('light-elements')">+ Добавить элемент</button>
-</div>
+    <label class="form-label">Рассматриваются анализаторы</label>
+    <select name="sinter_analyzer_type" class="form-select">
+      <option value="">Выберите...</option>
+      <option value="arp-1c">АРП-1Ц</option>
+      <option value="arp-2c">АРП-2Ц</option>
+    </select>
   </div>
-  <div class="mb-3">
-    <label class="form-label">Плотность</label>
-    <input type="text" name="density" class="form-control">
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Время измерения (мин/сред/макс), сек</label>
-    <input type="text" name="measurement_time" class="form-control">
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Наличие тяжёлых металлов в пульпе</label>
-    <input type="text" name="heavy_metals" class="form-control">
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Состав жидкой фазы</label>
-    <input type="text" name="liquid_phase" class="form-control">
-  </div>
-  <div class="mb-3">
-  <label class="form-label">Перечень используемых реагентов</label>
-  <input type="text" name="reagents" class="form-control">
-</div>
   <div class="mb-3">
     <label class="form-label">Скорость ленты (м/с)</label>
-    <input type="text" name="belt_speed" class="form-control">
+    <input type="text" name="sinter_belt_speed" class="form-control">
   </div>
   <div class="mb-3">
     <label class="form-label">Нагрузка на ленте (тонн/час, мин/макс)</label>
-    <input type="text" name="belt_load" class="form-control">
-  </div>
-<div class="mb-3">
-  <h5>Дополнительные условия</h5>
-  <div class="form-check">
-    <input class="form-check-input" type="checkbox" id="xrf_lab" name="xrf_lab">
-    <label class="form-check-label" for="xrf_lab">Наличие РФА-лаборатории на предприятии</label>
-  </div>
-  <div class="form-check">
-    <input class="form-check-input" type="checkbox" id="personnel_access" name="personnel_access">
-    <label class="form-check-label" for="personnel_access">Допуск персонала к источникам</label>
-  </div>
-  <div class="form-check">
-    <input class="form-check-input" type="checkbox" id="local_network" name="local_network">
-    <label class="form-check-label" for="local_network">Наличие локальной сети</label>
+    <input type="text" name="sinter_belt_load" class="form-control">
   </div>
   <div class="mb-3">
-    <label class="form-label" for="installation_location">Местонахождение установки</label>
-    <input type="text" class="form-control" id="installation_location" name="installation_location">
+    <h5>Анализируемые элементы от Ca до U + диапазон концентраций</h5>
+    <div id="sinter-elements-ca-u"></div>
+    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addElementRow('sinter-elements-ca-u')">+ Добавить элемент</button>
   </div>
   <div class="mb-3">
-    <label class="form-label" for="water_composition">Состав оборотной воды</label>
-    <input type="text" class="form-control" id="water_composition" name="water_composition">
+    <label class="form-label">Размер кусков (макс/сред), мм</label>
+    <input type="text" name="sinter_grain_size" class="form-control">
   </div>
-  <div class="form-check">
-    <input class="form-check-input" type="checkbox" id="video_surveillance" name="video_surveillance">
-    <label class="form-check-label" for="video_surveillance">Наличие видеонаблюдения</label>
+  <div class="mb-3">
+    <label class="form-label">Плотность</label>
+    <input type="text" name="sinter_density" class="form-control">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Время измерения (мин/сред/макс), сек</label>
+    <input type="text" name="sinter_measurement_time" class="form-control">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Наличие тяжёлых металлов в шихте</label>
+    <input type="text" name="sinter_heavy_metals" class="form-control">
   </div>
 </div>
 
-    
-  <div class="mb-3">
-    <h5>Основные анализируемые элементы и диапазоны их содержаний (в границах от 0,1 до 70)</h5>
-    <div id="main-elements"></div>
-    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addElementRow('main-elements')">+ Добавить элемент</button>
-  </div>
+    <!-- Контейнер для скриптов -->
+    <script>
+      function addElementRow(containerId) {
+        const container = document.getElementById(containerId);
+        const row = document.createElement('div');
+        row.className = 'element-row';
+        row.innerHTML = `
+          <input type="text" name="${containerId}_element[]" placeholder="Элемент" class="form-control">
+          <input type="text" name="${containerId}_range[]" placeholder="Диапазон (%)" class="form-control">
+          <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()">✖ Удалить</button>
+        `;
+        container.appendChild(row);
+      }
 
-<script>
-  function addElementRow(containerId) {
-    const container = document.getElementById(containerId);
-    const row = document.createElement('div');
-    row.className = 'element-row';
-    row.innerHTML = `
-      <input type="text" name="${containerId}_element[]" placeholder="Элемент" class="form-control">
-      <input type="text" name="${containerId}_range[]" placeholder="Диапазон (%)" class="form-control">
-      <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()">✖ Удалить</button>
-    `;
-    container.appendChild(row);
-  }
-
-  document.getElementById('material').addEventListener('change', function () {
-    const sections = document.querySelectorAll('.analyzer-section');
-    sections.forEach(s => s.style.display = 'none');
-    const selected = this.value;
-    const target = document.getElementById(`section-${selected}`);
-    if (target) target.style.display = 'block';
-  });
-
-  document.getElementById('feed_type').addEventListener('change', function () {
-    document.getElementById('block-naporny').style.display = 'none';
-    document.getElementById('block-samotek').style.display = 'none';
-    if (this.value === 'naporny') {
-      document.getElementById('block-naporny').style.display = 'block';
-    } else if (this.value === 'samotek') {
-      document.getElementById('block-samotek').style.display = 'block';
-    }
-  });
-</script>
+      document.getElementById('material').addEventListener('change', function () {
+        const sections = document.querySelectorAll('.analyzer-section');
+        sections.forEach(s => s.style.display = 'none');
+        const selected = this.value;
+        const target = document.getElementById(`section-${selected}`);
+        if (target) target.style.display = 'block';
+      });
+    </script>
 
   </form>
 </div>
