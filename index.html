@@ -63,122 +63,80 @@
       </select>
     </div>
 
+    <!-- Секция для шихты -->
     <div id="section-sinter" class="analyzer-section">
-  <h5>Шихта / руда: оборудование</h5>
-  <div class="mb-3">
-    <label class="form-label">Рассматриваются анализаторы</label>
-    <select name="analyzer_type" class="form-select">
-      <option value="">Выберите...</option>
-      <option value="arp-1c">АРП-1Ц</option>
-      <option value="arp-2c">АРП-2Ц</option>
-    </select>
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Скорость ленты (м/с)</label>
-    <input type="text" name="belt_speed" class="form-control">
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Нагрузка на ленте (тонн/час, мин/макс)</label>
-    <input type="text" name="belt_load" class="form-control">
-  </div>
-</div>
-
-    <!-- Секция для пульпы -->
-    $1
-<div class="mb-3">
-  <label class="form-label">Анализ легких химических элементов</label>
-  <input type="text" name="light_elements" class="form-control">
-</div>
-<div class="mb-3">
-  <label class="form-label">Плотность</label>
-  <input type="text" name="density" class="form-control">
-</div>
-<div class="mb-3">
-  <label class="form-label">Время измерения (мин/сред/макс), сек</label>
-  <input type="text" name="measurement_time" class="form-control">
-</div>
-<div class="mb-3">
-  <label class="form-label">Наличие тяжёлых металлов в пульпе</label>
-  <input type="text" name="heavy_metals" class="form-control">
-</div>
-<div class="mb-3">
-  <label class="form-label">Состав жидкой фазы</label>
-  <input type="text" name="liquid_phase" class="form-control">
-</div>
-<div class="mb-3">
-  <label class="form-label">Перечень используемых реагентов</label>
-  <input type="text" name="reagents" class="form-control">
-</div>
+      <h5>Шихта / руда: оборудование</h5>
       <div class="mb-3">
-        <label class="form-label">Характеристика подачи питания</label>
-        <select name="feed_type" id="feed_type" class="form-select">
+        <label class="form-label">Рассматриваются анализаторы</label>
+        <select name="analyzer_type" class="form-select">
           <option value="">Выберите...</option>
-          <option value="naporny">Напорный</option>
-          <option value="samotek">Самотек</option>
+          <option value="arp-1c">АРП-1Ц</option>
+          <option value="arp-2c">АРП-2Ц</option>
         </select>
       </div>
-      <div id="block-naporny" class="conditional-block">
-        <div class="mb-3">
-          <label class="form-label">Диаметр</label>
-          <input type="text" name="naporny_diameter" class="form-control">
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Материал (нерж. сталь, резиновая футеровка и т.д.)</label>
-          <input type="text" name="naporny_material" class="form-control">
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Давление нагнетания (кПа)</label>
-          <input type="text" name="pressure" class="form-control">
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Температура окружающей среды (мин/макс)</label>
-          <input type="text" name="temperature" class="form-control">
-        </div>
-      </div>
-      <div id="block-samotek" class="conditional-block">
-        <div class="mb-3">
-          <label class="form-label">Диаметр</label>
-          <input type="text" name="samotek_diameter" class="form-control">
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Материал (нерж. сталь, резиновая футеровка и т.д.)</label>
-          <input type="text" name="samotek_material" class="form-control">
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Угол разгрузки (в градусах)</label>
-          <input type="text" name="unload_angle" class="form-control">
-        </div>
-        <div class="mb-3">
-          <label class="form-label">Температура окружающей среды (мин/макс)</label>
-          <input type="text" name="temperature2" class="form-control">
-        </div>
+      <div class="mb-3">
+        <label class="form-label">Скорость ленты (м/с)</label>
+        <input type="text" name="belt_speed" class="form-control">
       </div>
       <div class="mb-3">
-        <h5>Основные анализируемые элементы и диапазоны их содержаний (в границах от 0,1 до 70)</h5>
-        <div id="main-elements"></div>
-        <button type="button" class="btn btn-outline-primary btn-sm" onclick="addElementRow('main-elements')">+ Добавить элемент</button>
+        <label class="form-label">Нагрузка на ленте (тонн/час, мин/макс)</label>
+        <input type="text" name="belt_load" class="form-control">
       </div>
     </div>
-    $1
+
+    <div id="section-pulp" class="analyzer-section">
+  <h5>Пульпа: оборудование</h5>
   <div class="mb-3">
-    <h5>Основные анализируемые элементы и диапазоны их содержаний (в границах от 0,1 до 70)</h5>
-    <div id="main-elements"></div>
-    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addElementRow('main-elements')">+ Добавить элемент</button>
+    <label class="form-label">Количество точек для анализа</label>
+    <input type="number" name="streams" class="form-control">
   </div>
+  <div class="mb-3">
+    <label class="form-label">Характеристика подачи питания</label>
+    <select name="feed_type" id="feed_type" class="form-select">
+      <option value="">Выберите...</option>
+      <option value="naporny">Напорный</option>
+      <option value="samotek">Самотек</option>
+    </select>
+  </div>
+  <div id="block-naporny" class="conditional-block">
+    <div class="mb-3">
+      <label class="form-label">Диаметр</label>
+      <input type="text" name="naporny_diameter" class="form-control">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Материал (нерж. сталь, резиновая футеровка и т.д.)</label>
+      <input type="text" name="naporny_material" class="form-control">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Давление нагнетания (кПа)</label>
+      <input type="text" name="pressure" class="form-control">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Температура окружающей среды (мин/макс)</label>
+      <input type="text" name="temperature" class="form-control">
+    </div>
+  </div>
+  <div id="block-samotek" class="conditional-block">
+    <div class="mb-3">
+      <label class="form-label">Диаметр</label>
+      <input type="text" name="samotek_diameter" class="form-control">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Материал (нерж. сталь, резиновая футеровка и т.д.)</label>
+      <input type="text" name="samotek_material" class="form-control">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Угол разгрузки (в градусах)</label>
+      <input type="text" name="unload_angle" class="form-control">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Температура окружающей среды (мин/макс)</label>
+      <input type="text" name="temperature2" class="form-control">
+    </div>
+  </div>
+</div>
 
 <script>
-  function addElementRow(containerId) {
-    const container = document.getElementById(containerId);
-    const row = document.createElement('div');
-    row.className = 'element-row';
-    row.innerHTML = `
-      <input type="text" name="${containerId}_element[]" placeholder="Элемент" class="form-control">
-      <input type="text" name="${containerId}_range[]" placeholder="Диапазон (%)" class="form-control">
-      <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()">✖</button>
-    `;
-    container.appendChild(row);
-  }
-$2
       document.getElementById('material').addEventListener('change', function () {
         const sections = document.querySelectorAll('.analyzer-section');
         sections.forEach(s => s.style.display = 'none');
