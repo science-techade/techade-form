@@ -52,16 +52,48 @@
     </div>
 
     <!-- Выпадающий список выбора материала -->
-    <div class="mb-3">
-      <label for="material" class="form-label">Тип анализируемого материала</label>
-      <select id="material" name="material" class="form-select" required>
-        <option value="">Выберите...</option>
-        <option value="pulp">Пульпа (1–3 потока для анализа)</option>
-        <option value="sinter">Шихта / руда</option>
-        <option value="multiplex">Пульпа с мультиплексором</option>
-        <option value="courier">Пульпа с мультиплексором (на замену анализатора Курьер)</option>
-      </select>
-    </div>
+    $1
+
+<div id="section-sinter" class="analyzer-section">
+  <h5>Шихта / руда: оборудование</h5>
+  <div class="mb-3">
+    <label class="form-label">Рассматриваются анализаторы</label>
+    <select name="analyzer_type" class="form-select">
+      <option value="">Выберите...</option>
+      <option value="arp-1c">АРП-1Ц</option>
+      <option value="arp-2c">АРП-2Ц</option>
+    </select>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Скорость ленты (м/с)</label>
+    <input type="text" name="belt_speed" class="form-control">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Нагрузка на ленте (тонн/час, мин/макс)</label>
+    <input type="text" name="belt_load" class="form-control">
+  </div>
+  <div class="mb-3">
+    <h5>Анализируемые элементы от Ca до U + диапазон концентраций</h5>
+    <div id="sinter-elements-ca-u"></div>
+    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addElementRow('sinter-elements-ca-u')">+ Добавить элемент</button>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Размер кусков (макс/сред), мм</label>
+    <input type="text" name="sinter_grain_size" class="form-control">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Плотность</label>
+    <input type="text" name="sinter_density" class="form-control">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Время измерения (мин/сред/макс), сек</label>
+    <input type="text" name="sinter_measurement_time" class="form-control">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Наличие тяжёлых металлов в шихте</label>
+    <input type="text" name="sinter_heavy_metals" class="form-control">
+  </div>
+</div>
 
     $1
 
@@ -97,6 +129,58 @@
       <input type="text" name="temperature" class="form-control">
     </div>
   </div>
+  <div id="block-samotek" class="conditional-block">
+    <div class="mb-3">
+      <label class="form-label">Диаметр</label>
+      <input type="text" name="samotek_diameter" class="form-control">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Материал (нерж. сталь, резиновая футеровка и т.д.)</label>
+      <input type="text" name="samotek_material" class="form-control">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Угол разгрузки (в градусах)</label>
+      <input type="text" name="unload_angle" class="form-control">
+    </div>
+    <div class="mb-3">
+      <label class="form-label">Температура окружающей среды (мин/макс)</label>
+      <input type="text" name="temperature2" class="form-control">
+    </div>
+  </div>
+
+  <div class="mb-3">
+    <h5>Анализируемые элементы от Ca до U + диапазон концентраций</h5>
+    <div id="elements-ca-u"></div>
+    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addElementRow('elements-ca-u')">+ Добавить элемент</button>
+  </div>
+
+  <div class="mb-3">
+    <h5>Анализ легких химических элементов</h5>
+    <div id="light-elements"></div>
+    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addElementRow('light-elements')">+ Добавить элемент</button>
+  </div>
+
+  <div class="mb-3">
+    <label class="form-label">Плотность</label>
+    <input type="text" name="density" class="form-control">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Время измерения (мин/сред/макс), сек</label>
+    <input type="text" name="measurement_time" class="form-control">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Наличие тяжёлых металлов в пульпе</label>
+    <input type="text" name="heavy_metals" class="form-control">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Состав жидкой фазы</label>
+    <input type="text" name="liquid_phase" class="form-control">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Перечень используемых реагентов</label>
+    <input type="text" name="reagents" class="form-control">
+  </div>
+</div>
   <div id="block-samotek" class="conditional-block">
     <div class="mb-3">
       <label class="form-label">Диаметр</label>
