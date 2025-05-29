@@ -261,12 +261,39 @@
     <input type="text" name="multiplex_heavy_metals" class="form-control">
   </div>
   <div class="mb-3">
-    <label class="form-label">Состав жидкой фазе</label>
+    <label class="form-label">Состав жидкой фазы</label>
     <input type="text" name="multiplex_liquid_phase" class="form-control">
   </div>
     <div class="mb-3">
     <label class="form-label">Перечень используемых реагентов</label>
     <input type="text" name="multiplex_reagents" class="form-control">
+  </div>
+  <div class="mb-3">
+    <h5>Дополнительные условия</h5>
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" id="xrf_lab" name="xrf_lab">
+      <label class="form-check-label" for="xrf_lab">Наличие РФА-лаборатории на предприятии</label>
+    </div>
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" id="personnel_access" name="personnel_access">
+      <label class="form-check-label" for="personnel_access">Допуск персонала к источникам</label>
+    </div>
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" id="local_network" name="local_network">
+      <label class="form-check-label" for="local_network">Наличие локальной сети</label>
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="installation_location">Местонахождение установки</label>
+      <input type="text" class="form-control" id="installation_location" name="installation_location">
+    </div>
+    <div class="mb-3">
+      <label class="form-label" for="water_composition">Состав оборотной воды</label>
+      <input type="text" class="form-control" id="water_composition" name="water_composition">
+    </div>
+    <div class="form-check">
+      <input class="form-check-input" type="checkbox" id="video_surveillance" name="video_surveillance">
+      <label class="form-check-label" for="video_surveillance">Наличие видеонаблюдения</label>
+    </div>
   </div>
 </div>
     
