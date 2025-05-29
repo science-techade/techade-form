@@ -389,12 +389,9 @@
         `;
         container.appendChild(row);
       }
-
       document.getElementById('material').addEventListener('change', function () {
-        const sections = document.querySelectorAll('.analyzer-section');
-        sections.forEach(s => s.style.display = 'none');
-        const selected = this.value;
-        const target = document.getElementById(`section-${selected}`);
+        document.querySelectorAll('.analyzer-section').forEach(s => s.style.display = 'none');
+        const target = document.getElementById(`section-${this.value}`);
         if (target) target.style.display = 'block';
       });
     </script>
