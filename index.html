@@ -217,6 +217,60 @@
     </div>
 </div>
 
+<div id="section-multiplex" class="analyzer-section">
+  <h5>Пульпа с мультиплексором</h5>
+  <div class="mb-3">
+    <label class="form-label">Количество точек для анализа</label>
+    <input type="number" name="multiplex_streams" class="form-control">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Расстояния между точками</label>
+    <input type="text" name="multiplex_distances" class="form-control">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Тип трубы и её характеристики (диаметр)</label>
+    <input type="text" name="multiplex_pipe_type" class="form-control">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Давление в трубопроводе</label>
+    <input type="text" name="multiplex_pressure" class="form-control">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Температура окружающей среды (мин/макс)</label>
+    <input type="text" name="multiplex_temperature" class="form-control">
+  </div>
+</div>
+  <div class="mb-3">
+    <label class="form-label">Скорость ленты (м/с)</label>
+    <input type="text" name="sinter_belt_speed" class="form-control">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Нагрузка на ленте (тонн/час, мин/макс)</label>
+    <input type="text" name="sinter_belt_load" class="form-control">
+  </div>
+  <div class="mb-3">
+    <h5>Анализируемые элементы от Ca до U + диапазон концентраций</h5>
+    <div id="sinter-elements-ca-u"></div>
+    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addElementRow('sinter-elements-ca-u')">+ Добавить элемент</button>
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Размер кусков (макс/сред), мм</label>
+    <input type="text" name="sinter_grain_size" class="form-control">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Плотность</label>
+    <input type="text" name="sinter_density" class="form-control">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Время измерения (мин/сред/макс), сек</label>
+    <input type="text" name="sinter_measurement_time" class="form-control">
+  </div>
+  <div class="mb-3">
+    <label class="form-label">Наличие тяжёлых металлов в шихте</label>
+    <input type="text" name="sinter_heavy_metals" class="form-control">
+  </div>
+</div>
+    
     <!-- Контейнер для скриптов -->
     <script>
       function addElementRow(containerId) {
