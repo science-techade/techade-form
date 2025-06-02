@@ -19,6 +19,7 @@
 <div class="container mt-4">
   <h2 class="mb-4">Опросный лист по техпроцессу</h2>
   <form id="form">
+  <div id="pdf-content">
 
     <!-- Основные сведения -->
     <div class="mb-4">
@@ -382,6 +383,9 @@
     </div>
   </div>
     </div>
+    </div>
+
+</form>
 
     <div class="mb-3">
   <button type="button" class="btn btn-primary" onclick="submitForm()">Отправить</button>
@@ -419,33 +423,34 @@
 
   // Отправка формы с PDF
   function submitForm() {
-    const form = document.getElementById("form");
-    const email = form.email.value;
+  const form = document.getElementById("form");
+  const email = form.email.value;
+  const pdfContent = document.getElementById("pdf-content");
 
-    if (!email) {
-      alert("Пожалуйста, введите email.");
-      return;
-    }
-
-    html2pdf().from(form).outputPdf('blob').then(function (pdfBlob) {
-      const reader = new FileReader();
-      reader.onload = function () {
-        const base64 = reader.result.split(',')[1];
-
-        emailjs.send("service_1rnpxea", "template_sk137ts", {
-          to: email,
-          subject: "Форма опроса по техпроцессу",
-          body: "См. прикреплённый PDF-файл",
-          attachment: base64
-        }).then(function (response) {
-          alert("Форма отправлена успешно!");
-        }, function (error) {
-          alert("Ошибка отправки: " + error.text);
-        });
-      };
-      reader.readAsDataURL(pdfBlob);
-    });
+  if (!email) {
+    alert("Пожалуйста, введите email.");
+    return;
   }
+
+  html2pdf().from(pdfContent).outputPdf('blob').then(function (pdfBlob) {
+    const reader = new FileReader();
+    reader.onload = function () {
+      const base64 = reader.result.split(',')[1];
+
+      emailjs.send("service_1rnpxea", "template_sk137ts", {
+        to: email,
+        subject: "Форма опроса по техпроцессу",
+        body: "См. прикреплённый PDF-файл",
+        attachment: base64
+      }).then(function (response) {
+        alert("Форма отправлена успешно!");
+      }, function (error) {
+        alert("Ошибка отправки: " + error.text);
+      });
+    };
+    reader.readAsDataURL(pdfBlob);
+  });
+}
 </script>
 
 
