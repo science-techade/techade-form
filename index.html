@@ -241,11 +241,16 @@
     <label class="form-label">Температура окружающей среды (мин/макс)</label>
     <input type="text" name="multiplex_temperature" class="form-control">
   </div>
-  <div class="mb-3">
-    <h5>Анализируемые элементы от Ca до U + диапазон концентраций</h5>
-    <div id="multiplex-elements-ca-u"></div>
-    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addElementRow('sinter-elements-ca-u')">+ Добавить элемент</button>
-  </div>
+<div class="mb-3">
+        <h5>Анализируемые элементы от Ca до U + диапазон концентраций</h5>
+        <div id="multiplex-elements-ca-u"></div>
+        <button type="button" class="btn btn-outline-primary btn-sm" onclick="addElementRow('multiplex-elements-ca-u')">+ Добавить элемент</button>
+      </div>
+      <div class="mb-3">
+        <h5>Анализ легких химических элементов</h5>
+        <div id="multiplex-light-elements"></div>
+        <button type="button" class="btn btn-outline-primary btn-sm" onclick="addElementRow('multiplex-light-elements')">+ Добавить элемент</button>
+      </div>
   <div class="mb-3">
     <label class="form-label">Размер кусков (макс/сред), мм</label>
     <input type="text" name="multiplex_grain_size" class="form-control">
