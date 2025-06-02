@@ -20,7 +20,7 @@
   <h2 class="mb-4">Опросный лист по техпроцессу</h2>
   <form id="form">
   <div id="pdf-content">
-
+  <input type="hidden" name="pdf_data" id="pdf_data">
     <!-- Основные сведения -->
     <div class="mb-4">
       <h5>Основные сведения</h5>
@@ -435,22 +435,19 @@
   html2pdf().from(pdfContent).outputPdf('blob').then(function (pdfBlob) {
     const reader = new FileReader();
     reader.onload = function () {
-      const base64 = reader.result.split(',')[1];
+      document.getElementById("pdf_data").value = reader.result;
 
-      emailjs.send("service_1rnpxea", "template_sk137ts", {
-        to: email,
-        subject: "Форма опроса по техпроцессу",
-        body: "См. прикреплённый PDF-файл",
-        attachment: base64
-      }).then(function (response) {
-        alert("Форма отправлена успешно!");
-      }, function (error) {
-        alert("Ошибка отправки: " + error.text);
-      });
+      emailjs.sendForm("service_1rnpxea", "template_sk137ts", form)
+        .then(function () {
+          alert("Форма отправлена успешно!");
+        }, function (error) {
+          alert("Ошибка отправки: " + error.text);
+        });
     };
     reader.readAsDataURL(pdfBlob);
   });
 }
+
 </script>
 
 
