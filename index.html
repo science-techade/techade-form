@@ -382,42 +382,20 @@
     </div>
   </div>
     </div>
+
+    <div class="mb-3">
+  <button type="button" class="btn btn-primary" onclick="submitForm()">Отправить</button>
+</div>
+
     
     <!-- Контейнер для скриптов -->
-    <script>
-      function addElementRow(containerId) {
-        const container = document.getElementById(containerId);
-        const row = document.createElement('div');
-        row.className = 'element-row';
-        row.innerHTML = `
-          <input type="text" name="${containerId}_element[]" placeholder="Элемент" class="form-control">
-          <input type="text" name="${containerId}_range[]" placeholder="Диапазон (%)" class="form-control">
-          <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()">✖ Удалить</button>
-        `;
-        container.appendChild(row);
-      }
-      document.getElementById('material').addEventListener('change', function () {
-        document.querySelectorAll('.analyzer-section').forEach(s => s.style.display = 'none');
-        const target = document.getElementById(`section-${this.value}`);
-        if (target) target.style.display = 'block';
-      });
-    <div class="mb-3">
-      <button type="button" class="btn btn-primary" onclick="submitForm()">Отправить</button>
-    </div>
-  </form>
-</div>
-
-    <div class="mb-3">
-      <button type="button" class="btn btn-primary" onclick="submitForm()">Отправить</button>
-    </div>
-  </form>
-</div>
-
-
-  (function() {
+   <script>
+  // Инициализация emailjs
+  (function () {
     emailjs.init("lK76KGFPVwTGiY9vX");
   })();
 
+  // Добавление строки с элементом
   function addElementRow(containerId) {
     const container = document.getElementById(containerId);
     const row = document.createElement('div');
@@ -430,15 +408,24 @@
     container.appendChild(row);
   }
 
-  document.getElementById('material').addEventListener('change', function () {
-    document.querySelectorAll('.analyzer-section').forEach(s => s.style.display = 'none');
-    const target = document.getElementById(`section-${this.value}`);
-    if (target) target.style.display = 'block';
+  // Переключение секций в зависимости от выбранного типа материала
+  document.addEventListener("DOMContentLoaded", function () {
+    document.getElementById('material').addEventListener('change', function () {
+      document.querySelectorAll('.analyzer-section').forEach(s => s.style.display = 'none');
+      const target = document.getElementById(`section-${this.value}`);
+      if (target) target.style.display = 'block';
+    });
   });
 
+  // Отправка формы с PDF
   function submitForm() {
     const form = document.getElementById("form");
     const email = form.email.value;
+
+    if (!email) {
+      alert("Пожалуйста, введите email.");
+      return;
+    }
 
     html2pdf().from(form).outputPdf('blob').then(function (pdfBlob) {
       const reader = new FileReader();
@@ -450,9 +437,9 @@
           subject: "Форма опроса по техпроцессу",
           body: "См. прикреплённый PDF-файл",
           attachment: base64
-        }).then(function(response) {
+        }).then(function (response) {
           alert("Форма отправлена успешно!");
-        }, function(error) {
+        }, function (error) {
           alert("Ошибка отправки: " + error.text);
         });
       };
@@ -460,6 +447,7 @@
     });
   }
 </script>
+
 
 </body>
 </html>
