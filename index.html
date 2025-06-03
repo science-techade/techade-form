@@ -396,7 +396,7 @@
   document.addEventListener("DOMContentLoaded", function () {
     emailjs.init("lK76KGFPVwTGiY9vX");
 
-    document.querySelector("button.btn-primary").addEventListener("click", submitForm);
+    document.getElementById("submitBtn").addEventListener("click", submitForm);
 
     document.getElementById("material").addEventListener("change", function () {
       document.querySelectorAll(".analyzer-section").forEach(s => s.style.display = "none");
@@ -423,43 +423,48 @@
       return;
     }
 
-    html2pdf().from(pdfContent).outputPdf('blob').then(function (pdfBlob) {
+    html2pdf().set({
+      filename: 'oprosny_list.pdf',
+      html2canvas: { scale: 2 },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    })
+    .from(pdfContent)
+    .outputPdf('blob')
+    .then(function (pdfBlob) {
       const file = new File([pdfBlob], "oprosny_list.pdf", { type: "application/pdf" });
       const formData = new FormData();
       formData.append("file", file);
 
-      fetch("https://transfer.sh/oprosny_list.pdf", {
+      return fetch("https://transfer.sh/oprosny_list.pdf", {
         method: "POST",
         body: formData
-      })
-      .then(response => response.text())
-      .then(link => {
-        console.log("PDF загружен. Ссылка:", link);
-
-        const templateParams = {
-          to: email,
-          email: email,
-          company: company,
-          date: date,
-          contact_person: contact_person,
-          phone: phone,
-          country: country,
-          location: location,
-          material: material,
-          subject: "Новый опросный лист",
-          time: new Date().toLocaleString(),
-          pdf_link: link
-        };
-
-        return emailjs.send("service_1rnpxea", "template_sk137ts", templateParams);
-      })
-      .then(() => {
-        alert("Форма успешно отправлена. Ссылка на PDF отправлена по email.");
-      })
-      .catch((error) => {
-        console.error("Ошибка при отправке:", error);
-        alert("Ошибка отправки: " + error.message);
       });
+    })
+    .then(response => response.text())
+    .then(link => {
+      const templateParams = {
+        to: email,
+        email: email,
+        company: company,
+        date: date,
+        contact_person: contact_person,
+        phone: phone,
+        country: country,
+        location: location,
+        material: material,
+        subject: "Новый опросный лист",
+        time: new Date().toLocaleString(),
+        pdf_link: link
+      };
+
+      return emailjs.send("service_1rnpxea", "template_sk137ts", templateParams);
+    })
+    .then(() => {
+      alert("Форма успешно отправлена. Ссылка на PDF отправлена по email.");
+    })
+    .catch((error) => {
+      console.error("Ошибка при отправке:", error);
+      alert("Ошибка отправки: " + error.message);
     });
   }
 </script>
