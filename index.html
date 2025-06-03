@@ -392,8 +392,7 @@
 </div>
 
     
-    <!-- Контейнер для скриптов -->
-   <script>
+<script>
   // Инициализация emailjs
   (function () {
     emailjs.init("lK76KGFPVwTGiY9vX");
@@ -421,12 +420,7 @@
     });
   });
 
-  // Отправка формы с PDF
- <script>
-  (function () {
-    emailjs.init("lK76KGFPVwTGiY9vX");
-  })();
-
+  // Отправка формы с PDF через transfer.sh
   function submitForm() {
     const form = document.getElementById("form");
     const pdfContent = document.getElementById("pdf-content");
@@ -445,11 +439,8 @@
       return;
     }
 
-    // Шаг 1: Генерация PDF
     html2pdf().from(pdfContent).outputPdf('blob').then(function (pdfBlob) {
-      // Шаг 2: Загружаем PDF на transfer.sh
       const file = new File([pdfBlob], "oprosny_list.pdf", { type: "application/pdf" });
-
       const formData = new FormData();
       formData.append("file", file);
 
@@ -459,8 +450,6 @@
       })
       .then(response => response.text())
       .then(link => {
-        console.log("PDF доступен по ссылке:", link);
-
         const templateParams = {
           to: email,
           email: email,
@@ -473,7 +462,7 @@
           material: material,
           subject: "Новый опросный лист",
           time: new Date().toLocaleString(),
-          pdf_link: link // 👈 Вставляем в шаблон
+          pdf_link: link
         };
 
         return emailjs.send("service_1rnpxea", "template_sk137ts", templateParams);
@@ -488,7 +477,6 @@
     });
   }
 </script>
-
 
 
 
