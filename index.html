@@ -393,15 +393,12 @@
 
     
 <script>
-  document.addEventListener("DOMContentLoaded", function () {
-    emailjs.init("lK76KGFPVwTGiY9vX");
 
-    document.getElementById("submitBtn").addEventListener("click", submitForm);
-
-    document.getElementById("material").addEventListener("change", function () {
-      document.querySelectorAll(".analyzer-section").forEach(s => s.style.display = "none");
+    document.addEventListener("DOMContentLoaded", function () {
+    document.getElementById('material').addEventListener('change', function () {
+      document.querySelectorAll('.analyzer-section').forEach(s => s.style.display = 'none');
       const target = document.getElementById(`section-${this.value}`);
-      if (target) target.style.display = "block";
+      if (target) target.style.display = 'block';
     });
   });
 
