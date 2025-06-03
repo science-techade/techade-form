@@ -422,33 +422,75 @@
   });
 
   // Отправка формы с PDF
+ <script>
+  (function () {
+    emailjs.init("lK76KGFPVwTGiY9vX");
+  })();
+
   function submitForm() {
-  const form = document.getElementById("form");
-  const email = form.email.value;
-  const pdfContent = document.getElementById("pdf-content");
+    const form = document.getElementById("form");
+    const pdfContent = document.getElementById("pdf-content");
 
-  if (!email) {
-    alert("Пожалуйста, введите email.");
-    return;
+    const email = form.email.value;
+    const company = form.company.value;
+    const date = form.date.value;
+    const contact_person = form.contact_person.value;
+    const phone = form.phone.value;
+    const country = form.country.value;
+    const location = form.location.value;
+    const material = form.material.value;
+
+    if (!email) {
+      alert("Пожалуйста, введите email.");
+      return;
+    }
+
+    // Шаг 1: Генерация PDF
+    html2pdf().from(pdfContent).outputPdf('blob').then(function (pdfBlob) {
+      // Шаг 2: Загружаем PDF на transfer.sh
+      const file = new File([pdfBlob], "oprosny_list.pdf", { type: "application/pdf" });
+
+      const formData = new FormData();
+      formData.append("file", file);
+
+      fetch("https://transfer.sh/oprosny_list.pdf", {
+        method: "POST",
+        body: formData
+      })
+      .then(response => response.text())
+      .then(link => {
+        console.log("PDF доступен по ссылке:", link);
+
+        const templateParams = {
+          to: email,
+          email: email,
+          company: company,
+          date: date,
+          contact_person: contact_person,
+          phone: phone,
+          country: country,
+          location: location,
+          material: material,
+          subject: "Новый опросный лист",
+          time: new Date().toLocaleString(),
+          pdf_link: link // 👈 Вставляем в шаблон
+        };
+
+        return emailjs.send("service_1rnpxea", "template_sk137ts", templateParams);
+      })
+      .then(() => {
+        alert("Форма успешно отправлена. Ссылка на PDF отправлена по email.");
+      })
+      .catch((error) => {
+        console.error("Ошибка при загрузке/отправке:", error);
+        alert("Ошибка отправки: " + error.message);
+      });
+    });
   }
-
-  html2pdf().from(pdfContent).outputPdf('blob').then(function (pdfBlob) {
-    const reader = new FileReader();
-    reader.onload = function () {
-      document.getElementById("pdf_data").value = reader.result;
-
-      emailjs.sendForm("service_1rnpxea", "template_sk137ts", form)
-        .then(function () {
-          alert("Форма отправлена успешно!");
-        }, function (error) {
-          alert("Ошибка отправки: " + error.text);
-        });
-    };
-    reader.readAsDataURL(pdfBlob);
-  });
-}
-
 </script>
+
+
+
 
 
 </body>
