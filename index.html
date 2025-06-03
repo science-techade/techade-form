@@ -393,34 +393,18 @@
 
     
 <script>
-  // Инициализация emailjs
-  (function () {
-    emailjs.init("lK76KGFPVwTGiY9vX");
-  })();
-
-  // Добавление строки с элементом
-  function addElementRow(containerId) {
-    const container = document.getElementById(containerId);
-    const row = document.createElement('div');
-    row.className = 'element-row';
-    row.innerHTML = `
-      <input type="text" name="${containerId}_element[]" placeholder="Элемент" class="form-control">
-      <input type="text" name="${containerId}_range[]" placeholder="Диапазон (%)" class="form-control">
-      <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()">✖ Удалить</button>
-    `;
-    container.appendChild(row);
-  }
-
-  // Переключение секций в зависимости от выбранного типа материала
   document.addEventListener("DOMContentLoaded", function () {
-    document.getElementById('material').addEventListener('change', function () {
-      document.querySelectorAll('.analyzer-section').forEach(s => s.style.display = 'none');
+    emailjs.init("lK76KGFPVwTGiY9vX");
+
+    document.querySelector("button.btn-primary").addEventListener("click", submitForm);
+
+    document.getElementById("material").addEventListener("change", function () {
+      document.querySelectorAll(".analyzer-section").forEach(s => s.style.display = "none");
       const target = document.getElementById(`section-${this.value}`);
-      if (target) target.style.display = 'block';
+      if (target) target.style.display = "block";
     });
   });
 
-  // Отправка формы с PDF через transfer.sh
   function submitForm() {
     const form = document.getElementById("form");
     const pdfContent = document.getElementById("pdf-content");
@@ -450,6 +434,8 @@
       })
       .then(response => response.text())
       .then(link => {
+        console.log("PDF загружен. Ссылка:", link);
+
         const templateParams = {
           to: email,
           email: email,
@@ -471,12 +457,13 @@
         alert("Форма успешно отправлена. Ссылка на PDF отправлена по email.");
       })
       .catch((error) => {
-        console.error("Ошибка при загрузке/отправке:", error);
+        console.error("Ошибка при отправке:", error);
         alert("Ошибка отправки: " + error.message);
       });
     });
   }
 </script>
+
 
 
 
