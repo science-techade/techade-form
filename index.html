@@ -507,14 +507,6 @@ function submitForm() {
     return;
   }
 
-if (preview && preview.dataset.jpeg) {
-  const img = document.createElement("img");
-  img.src = preview.dataset.jpeg;
-  img.style.maxWidth = "100%";
-  img.style.marginTop = "10px";
-  pdfContent.appendChild(img);
-}
-
   html2pdf().set({
     filename: 'oprosny_list.pdf',
     html2canvas: { scale: 2 },
