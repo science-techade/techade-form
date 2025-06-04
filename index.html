@@ -426,7 +426,9 @@ document.addEventListener("DOMContentLoaded", function () {
     });
     if (value) {
       const section = document.getElementById(`section-${value}`);
-      if (section) section.style.display = 'block';
+      if (section) {
+        section.style.display = 'block';
+      }
     }
   }
 
@@ -436,28 +438,41 @@ document.addEventListener("DOMContentLoaded", function () {
 
   showAnalyzerSection(materialSelect.value);
 
-  ["pulp", "sinter", "multiplex", "courier"].forEach(bindPhotoPreview);
-});
+  ["pulp", "sinter", "multiplex", "courier"].forEach(section => {
+    const input = document.getElementById(`installation_photo_${section}`);
+    if (!input) return;
 
-function bindPhotoPreview(section) {
-  const input = document.getElementById(`installation_photo_${section}`);
-  if (!input) return;
+    input.addEventListener("change", function () {
+      const file = this.files[0];
+      if (!file || !file.type.match(/^image\/(jpeg|png)$/)) {
+        alert("Загрузите изображение в формате JPG или PNG.");
+        return;
+      }
 
-  input.addEventListener("change", function () {
-    const file = this.files[0];
-    if (!file || !file.type.match(/^image\/(jpe?g|png)$/i)) {
-      alert("Загрузите JPG или PNG.");
-      return;
-    }
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const img = new Image();
+        img.onload = function () {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0);
+          const jpegDataUrl = canvas.toDataURL("image/jpeg", 0.92);
+          input.setAttribute("data-jpeg", jpegDataUrl);
 
-    const reader = new FileReader();
-    reader.onload = function (e) {
-      const jpegDataUrl = e.target.result;
-      input.setAttribute("data-jpeg", jpegDataUrl);
-    };
-    reader.readAsDataURL(file);
+          const preview = document.getElementById(`installation_preview_${section}`);
+          if (preview) {
+            preview.src = jpegDataUrl;
+            preview.style.display = "block";
+          }
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
   });
-}
+});
 
 function submitForm() {
   const form = document.getElementById("form");
@@ -481,43 +496,34 @@ function submitForm() {
     return;
   }
 
-  // Создаем временный контейнер для PDF
-  const clone = pdfContent.cloneNode(true);
-  const container = document.createElement("div");
-  container.style.position = "fixed";
-  container.style.left = "-9999px";
-  container.appendChild(clone);
-  document.body.appendChild(container);
-
-  // Удаляем все input type="file" и изображения без src
-  clone.querySelectorAll('input[type="file"], img:not([src])').forEach(el => el.remove());
-
-  // Вставка изображения
+  // Вставляем изображение в div перед генерацией PDF
+  let tempImage = null;
   if (imageData) {
-    const img = document.createElement("img");
-    img.src = imageData;
-    img.style.maxWidth = "100%";
-    img.style.marginTop = "10px";
-    clone.appendChild(img);
+    tempImage = document.createElement("img");
+    tempImage.src = imageData;
+    tempImage.style.maxWidth = "100%";
+    tempImage.style.marginTop = "20px";
+    pdfContent.appendChild(tempImage);
   }
 
   html2pdf().set({
     html2canvas: { scale: 2, useCORS: true },
     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
   })
-  .from(clone)
+  .from(pdfContent)
   .output('datauristring')
-  .then(pdfDataUri => {
-    pdfPreview.src = pdfDataUri;
+  .then(dataUri => {
+    pdfPreview.src = dataUri;
     pdfPreview.style.display = 'block';
+
     return html2pdf().set({
       filename: 'oprosny_list.pdf',
       html2canvas: { scale: 2, useCORS: true },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    }).from(clone).outputPdf('blob');
+    }).from(pdfContent).outputPdf('blob');
   })
   .then(blob => {
-    container.remove();
+    if (tempImage) tempImage.remove(); // удаляем картинку после генерации
     const file = new File([blob], "oprosny_list.pdf", { type: "application/pdf" });
     const formData = new FormData();
     formData.append("file", file);
@@ -526,18 +532,18 @@ function submitForm() {
       body: formData
     });
   })
-  .then(response => response.text())
+  .then(res => res.text())
   .then(link => {
     const templateParams = {
       to: email,
-      email,
-      company,
-      date,
-      contact_person,
-      phone,
-      country,
-      location,
-      material,
+      email: email,
+      company: company,
+      date: date,
+      contact_person: contact_person,
+      phone: phone,
+      country: country,
+      location: location,
+      material: material,
       subject: "Новый опросный лист",
       time: new Date().toLocaleString(),
       pdf_link: link
@@ -548,17 +554,11 @@ function submitForm() {
     alert("Форма успешно отправлена. Ссылка на PDF отправлена по email.");
   })
   .catch(error => {
-    console.error("Ошибка при отправке:", error);
-    alert("Ошибка отправки: " + error.message);
+    console.error("Ошибка:", error);
+    alert("Ошибка: " + error.message);
   });
 }
 </script>
-
-
-
-
-
-
 
 
 
