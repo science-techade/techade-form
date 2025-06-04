@@ -416,68 +416,53 @@
 
     
 <script>
+document.addEventListener("DOMContentLoaded", function () {
+  const materialSelect = document.getElementById("material");
 
-  document.addEventListener("DOMContentLoaded", function () {
-    const materialSelect = document.getElementById("material");
-
-    function showAnalyzerSection(value) {
-      console.log("Выбран материал:", value);
-      document.querySelectorAll('.analyzer-section').forEach(section => {
-        section.style.display = 'none';
-      });
-      if (value) {
-        const section = document.getElementById(`section-${value}`);
-        if (section) {
-          section.style.display = 'block';
-        }
+  function showAnalyzerSection(value) {
+    document.querySelectorAll('.analyzer-section').forEach(section => {
+      section.style.display = 'none';
+    });
+    if (value) {
+      const section = document.getElementById(`section-${value}`);
+      if (section) {
+        section.style.display = 'block';
       }
     }
+  }
 
-    materialSelect.addEventListener("change", function () {
-      showAnalyzerSection(this.value);
-    });
-
-    showAnalyzerSection(materialSelect.value);
-
-    // Привязка превью изображений
-    ["pulp", "sinter", "multiplex", "courier"].forEach(function (section) {
-      const input = document.getElementById(`installation_photo_${section}`);
-      const preview = document.getElementById(`installation_preview_${section}`);
-
-    });
+  materialSelect.addEventListener("change", function () {
+    showAnalyzerSection(this.value);
   });
+
+  showAnalyzerSection(materialSelect.value);
+
+  ["pulp", "sinter", "multiplex", "courier"].forEach(bindPhotoPreview);
+});
 
 function bindPhotoPreview(section) {
   const input = document.getElementById(`installation_photo_${section}`);
-  const preview = document.getElementById(`installation_preview_${section}`);
-
-  if (!input || !preview) return;
+  if (!input) return;
 
   input.addEventListener("change", function () {
     const file = this.files[0];
     if (!file || !file.type.match(/^image\/(jpe?g|png)$/)) {
       alert("Загрузите JPG или PNG.");
-      preview.src = "";
-      preview.style.display = "none";
       return;
     }
 
     const reader = new FileReader();
     reader.onload = function (e) {
       const img = new Image();
-      img.crossOrigin = "anonymous"; // важно
+      img.crossOrigin = "anonymous";
       img.onload = function () {
         const canvas = document.createElement("canvas");
         canvas.width = img.width;
         canvas.height = img.height;
         const ctx = canvas.getContext("2d");
         ctx.drawImage(img, 0, 0);
-
-        // Конвертация в JPEG
         const jpegDataUrl = canvas.toDataURL("image/jpeg", 0.9);
-        preview.removeAttribute("src"); // Убираем потенциальный HEIC/WebP
-preview.setAttribute("data-jpeg", jpegDataUrl);
-preview.style.display = "block";
+        input.setAttribute("data-jpeg", jpegDataUrl);
       };
       img.src = e.target.result;
     };
@@ -485,14 +470,12 @@ preview.style.display = "block";
   });
 }
 
-["pulp", "sinter", "multiplex", "courier"].forEach(bindPhotoPreview);
-
 function submitForm() {
   const form = document.getElementById("form");
   const pdfContent = document.getElementById("pdf-content");
 
   const material = form.material.value;
-  const preview = document.getElementById(`installation_preview_${material}`);
+  const photoInput = document.getElementById(`installation_photo_${material}`);
 
   const email = form.email.value;
   const company = form.company.value;
@@ -505,6 +488,15 @@ function submitForm() {
   if (!email) {
     alert("Пожалуйста, введите email.");
     return;
+  }
+
+  // ВСТАВКА ИЗОБРАЖЕНИЯ В PDF
+  if (photoInput && photoInput.dataset.jpeg) {
+    const img = document.createElement("img");
+    img.src = photoInput.dataset.jpeg;
+    img.style.maxWidth = "100%";
+    img.style.marginTop = "10px";
+    pdfContent.appendChild(img);
   }
 
   html2pdf().set({
@@ -552,6 +544,7 @@ function submitForm() {
   });
 }
 </script>
+
 
 
 
