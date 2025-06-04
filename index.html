@@ -471,9 +471,8 @@ function bindPhotoPreview(section) {
 
   input.addEventListener("change", function () {
     const file = this.files[0];
-
-    if (!file || !file.type.match(/^image\/(jpeg|png)$/)) {
-      alert("Допустимы только JPG и PNG.");
+    if (!file || !file.type.match(/^image\/(jpe?g|png)$/)) {
+      alert("Загрузите JPG или PNG.");
       preview.src = "";
       preview.style.display = "none";
       return;
@@ -482,19 +481,19 @@ function bindPhotoPreview(section) {
     const reader = new FileReader();
     reader.onload = function (e) {
       const img = new Image();
+      img.crossOrigin = "anonymous"; // важно
       img.onload = function () {
-        // Создаём canvas и перерисовываем изображение в JPEG
         const canvas = document.createElement("canvas");
         canvas.width = img.width;
         canvas.height = img.height;
         const ctx = canvas.getContext("2d");
         ctx.drawImage(img, 0, 0);
-        // конвертация в JPEG с качеством 0.9
+
+        // Конвертация в JPEG
         const jpegDataUrl = canvas.toDataURL("image/jpeg", 0.9);
         preview.src = jpegDataUrl;
         preview.style.display = "block";
-        // сохраняем результат в data-* атрибуте для использования в PDF
-        preview.setAttribute("data-jpeg", jpegDataUrl);
+        preview.setAttribute("data-jpeg", jpegDataUrl); // сохранить JPEG для вставки
       };
       img.src = e.target.result;
     };
@@ -502,7 +501,6 @@ function bindPhotoPreview(section) {
   });
 }
 
-// Применяем ко всем секциям
 ["pulp", "sinter", "multiplex", "courier"].forEach(bindPhotoPreview);
 
 function submitForm() {
