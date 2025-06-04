@@ -439,7 +439,23 @@ document.getElementById("installation_photo").addEventListener("change", functio
   };
   reader.readAsDataURL(file);
 });
+  function showAnalyzerSection(value) {
+    document.querySelectorAll('.analyzer-section').forEach(section => {
+      section.style.display = 'none';
+    });
+    if (value) {
+      const section = document.getElementById(`section-${value}`);
+      if (section) section.style.display = 'block';
+    }
+  }
 
+  document.addEventListener("DOMContentLoaded", function () {
+    const materialSelect = document.getElementById("material");
+    materialSelect.addEventListener("change", function () {
+      showAnalyzerSection(this.value);
+    });
+    showAnalyzerSection(materialSelect.value);
+  });
 function submitForm() {
   const form = document.getElementById("form");
   const pdfContent = document.getElementById("pdf-content");
