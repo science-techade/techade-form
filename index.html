@@ -415,6 +415,29 @@
 
     
 <script>
+
+  document.addEventListener("DOMContentLoaded", function () {
+  const materialSelect = document.getElementById("material");
+
+  function showAnalyzerSection(value) {
+    document.querySelectorAll('.analyzer-section').forEach(section => {
+      section.style.display = 'none';
+    });
+    if (value) {
+      const section = document.getElementById(`section-${value}`);
+      if (section) section.style.display = 'block';
+    }
+  }
+
+  materialSelect.addEventListener("change", function () {
+    showAnalyzerSection(this.value);
+  });
+
+  // Показываем сразу при загрузке, если уже выбрано
+  showAnalyzerSection(materialSelect.value);
+});
+
+  
 function bindPhotoPreview(section) {
   const input = document.getElementById(`installation_photo_${section}`);
   const preview = document.getElementById(`installation_preview_${section}`);
