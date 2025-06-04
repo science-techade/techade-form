@@ -490,23 +490,32 @@ function submitForm() {
     return;
   }
 
-  // ВСТАВКА ИЗОБРАЖЕНИЯ В PDF
-  if (photoInput && photoInput.dataset.jpeg) {
+  // ВСТАВКА ИЗОБРАЖЕНИЯ В PDF временно
+  let tempImgWrapper = null;
+  if (photoInput && photoInput.dataset.jpeg && photoInput.dataset.jpeg.startsWith("data:image/jpeg")) {
     const img = document.createElement("img");
     img.src = photoInput.dataset.jpeg;
     img.style.maxWidth = "100%";
     img.style.marginTop = "10px";
-    pdfContent.appendChild(img);
+
+    tempImgWrapper = document.createElement("div");
+    tempImgWrapper.appendChild(img);
+    pdfContent.appendChild(tempImgWrapper);
   }
 
   html2pdf().set({
     filename: 'oprosny_list.pdf',
-    html2canvas: { scale: 2 },
+    html2canvas: { scale: 2, useCORS: true },  // <-- Важно для загрузки изображений
     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
   })
   .from(pdfContent)
   .outputPdf('blob')
   .then(function (pdfBlob) {
+    // удаляем изображение после генерации
+    if (tempImgWrapper) {
+      tempImgWrapper.remove();
+    }
+
     const file = new File([pdfBlob], "oprosny_list.pdf", { type: "application/pdf" });
     const formData = new FormData();
     formData.append("file", file);
@@ -544,6 +553,7 @@ function submitForm() {
   });
 }
 </script>
+
 
 
 
