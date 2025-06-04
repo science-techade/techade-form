@@ -426,9 +426,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
     if (value) {
       const section = document.getElementById(`section-${value}`);
-      if (section) {
-        section.style.display = 'block';
-      }
+      if (section) section.style.display = 'block';
     }
   }
 
@@ -447,25 +445,15 @@ function bindPhotoPreview(section) {
 
   input.addEventListener("change", function () {
     const file = this.files[0];
-    if (!file || !file.type.match(/^image\/(jpe?g|png)$/)) {
+    if (!file || !file.type.match(/^image\/(jpe?g|png)$/i)) {
       alert("Загрузите JPG или PNG.");
       return;
     }
 
     const reader = new FileReader();
     reader.onload = function (e) {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = function () {
-        const canvas = document.createElement("canvas");
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0);
-        const jpegDataUrl = canvas.toDataURL("image/jpeg", 0.9);
-        input.setAttribute("data-jpeg", jpegDataUrl);
-      };
-      img.src = e.target.result;
+      const jpegDataUrl = e.target.result;
+      input.setAttribute("data-jpeg", jpegDataUrl);
     };
     reader.readAsDataURL(file);
   });
@@ -493,79 +481,79 @@ function submitForm() {
     return;
   }
 
-  let imageNode = null;
+  // Создаем временный контейнер для PDF
+  const clone = pdfContent.cloneNode(true);
+  const container = document.createElement("div");
+  container.style.position = "fixed";
+  container.style.left = "-9999px";
+  container.appendChild(clone);
+  document.body.appendChild(container);
 
-  const prepareImageNode = () => {
-    return new Promise((resolve) => {
-      if (!imageData) return resolve();
+  // Удаляем все input type="file" и изображения без src
+  clone.querySelectorAll('input[type="file"], img:not([src])').forEach(el => el.remove());
 
-      const img = document.createElement("img");
-      img.src = imageData;
-      img.style.maxWidth = "100%";
-      img.style.marginTop = "10px";
-      pdfContent.appendChild(img);
-      imageNode = img;
-      resolve();
+  // Вставка изображения
+  if (imageData) {
+    const img = document.createElement("img");
+    img.src = imageData;
+    img.style.maxWidth = "100%";
+    img.style.marginTop = "10px";
+    clone.appendChild(img);
+  }
+
+  html2pdf().set({
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  })
+  .from(clone)
+  .output('datauristring')
+  .then(pdfDataUri => {
+    pdfPreview.src = pdfDataUri;
+    pdfPreview.style.display = 'block';
+    return html2pdf().set({
+      filename: 'oprosny_list.pdf',
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    }).from(clone).outputPdf('blob');
+  })
+  .then(blob => {
+    container.remove();
+    const file = new File([blob], "oprosny_list.pdf", { type: "application/pdf" });
+    const formData = new FormData();
+    formData.append("file", file);
+    return fetch("https://transfer.sh/oprosny_list.pdf", {
+      method: "POST",
+      body: formData
     });
-  };
-
-  prepareImageNode()
-    .then(() => {
-      // Предпросмотр PDF
-      return html2pdf().set({
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      }).from(pdfContent).output('datauristring');
-    })
-    .then((pdfDataUri) => {
-      pdfPreview.src = pdfDataUri;
-      pdfPreview.style.display = 'block';
-
-      // Генерация финального PDF-файла
-      return html2pdf().set({
-        filename: 'oprosny_list.pdf',
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      }).from(pdfContent).outputPdf('blob');
-    })
-    .then((pdfBlob) => {
-      if (imageNode) imageNode.remove(); // удаляем изображение после генерации
-      const file = new File([pdfBlob], "oprosny_list.pdf", { type: "application/pdf" });
-      const formData = new FormData();
-      formData.append("file", file);
-      return fetch("https://transfer.sh/oprosny_list.pdf", {
-        method: "POST",
-        body: formData
-      });
-    })
-    .then(response => response.text())
-    .then(link => {
-      const templateParams = {
-        to: email,
-        email: email,
-        company: company,
-        date: date,
-        contact_person: contact_person,
-        phone: phone,
-        country: country,
-        location: location,
-        material: material,
-        subject: "Новый опросный лист",
-        time: new Date().toLocaleString(),
-        pdf_link: link
-      };
-
-      return emailjs.send("service_1rnpxea", "template_sk137ts", templateParams);
-    })
-    .then(() => {
-      alert("Форма успешно отправлена. Ссылка на PDF отправлена по email.");
-    })
-    .catch((error) => {
-      console.error("Ошибка при отправке:", error);
-      alert("Ошибка отправки: " + error.message);
-    });
+  })
+  .then(response => response.text())
+  .then(link => {
+    const templateParams = {
+      to: email,
+      email,
+      company,
+      date,
+      contact_person,
+      phone,
+      country,
+      location,
+      material,
+      subject: "Новый опросный лист",
+      time: new Date().toLocaleString(),
+      pdf_link: link
+    };
+    return emailjs.send("service_1rnpxea", "template_sk137ts", templateParams);
+  })
+  .then(() => {
+    alert("Форма успешно отправлена. Ссылка на PDF отправлена по email.");
+  })
+  .catch(error => {
+    console.error("Ошибка при отправке:", error);
+    alert("Ошибка отправки: " + error.message);
+  });
 }
 </script>
+
 
 
 
