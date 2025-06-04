@@ -443,23 +443,7 @@
     ["pulp", "sinter", "multiplex", "courier"].forEach(function (section) {
       const input = document.getElementById(`installation_photo_${section}`);
       const preview = document.getElementById(`installation_preview_${section}`);
-      if (input && preview) {
-        input.addEventListener("change", function () {
-          const file = this.files[0];
-          if (!file || !file.type.startsWith("image/")) {
-            alert("Загрузите файл формата JPG или PNG.");
-            preview.src = "";
-            preview.style.display = "none";
-            return;
-          }
-          const reader = new FileReader();
-          reader.onload = function (e) {
-            preview.src = e.target.result;
-            preview.style.display = "block";
-          };
-          reader.readAsDataURL(file);
-        });
-      }
+
     });
   });
 
@@ -491,9 +475,9 @@ function bindPhotoPreview(section) {
 
         // Конвертация в JPEG
         const jpegDataUrl = canvas.toDataURL("image/jpeg", 0.9);
-        preview.src = jpegDataUrl;
-        preview.style.display = "block";
-        preview.setAttribute("data-jpeg", jpegDataUrl); // сохранить JPEG для вставки
+        preview.removeAttribute("src"); // Убираем потенциальный HEIC/WebP
+preview.setAttribute("data-jpeg", jpegDataUrl);
+preview.style.display = "block";
       };
       img.src = e.target.result;
     };
