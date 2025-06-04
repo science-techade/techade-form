@@ -415,7 +415,6 @@
 
     
 <script>
-
 document.getElementById("installation_photo").addEventListener("change", function () {
   const file = this.files[0];
   const preview = document.getElementById("installation_preview");
@@ -441,70 +440,80 @@ document.getElementById("installation_photo").addEventListener("change", functio
   reader.readAsDataURL(file);
 });
 
+function submitForm() {
+  const form = document.getElementById("form");
+  const pdfContent = document.getElementById("pdf-content");
+  const preview = document.getElementById("installation_preview");
 
-  function submitForm() {
-    const form = document.getElementById("form");
-    const pdfContent = document.getElementById("pdf-content");
+  const email = form.email.value;
+  const company = form.company.value;
+  const date = form.date.value;
+  const contact_person = form.contact_person.value;
+  const phone = form.phone.value;
+  const country = form.country.value;
+  const location = form.location.value;
+  const material = form.material.value;
 
-    const email = form.email.value;
-    const company = form.company.value;
-    const date = form.date.value;
-    const contact_person = form.contact_person.value;
-    const phone = form.phone.value;
-    const country = form.country.value;
-    const location = form.location.value;
-    const material = form.material.value;
-
-    if (!email) {
-      alert("Пожалуйста, введите email.");
-      return;
-    }
-
-    html2pdf().set({
-      filename: 'oprosny_list.pdf',
-      html2canvas: { scale: 2 },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    })
-    .from(pdfContent)
-    .outputPdf('blob')
-    .then(function (pdfBlob) {
-      const file = new File([pdfBlob], "oprosny_list.pdf", { type: "application/pdf" });
-      const formData = new FormData();
-      formData.append("file", file);
-
-      return fetch("https://transfer.sh/oprosny_list.pdf", {
-        method: "POST",
-        body: formData
-      });
-    })
-    .then(response => response.text())
-    .then(link => {
-      const templateParams = {
-        to: email,
-        email: email,
-        company: company,
-        date: date,
-        contact_person: contact_person,
-        phone: phone,
-        country: country,
-        location: location,
-        material: material,
-        subject: "Новый опросный лист",
-        time: new Date().toLocaleString(),
-        pdf_link: link
-      };
-
-      return emailjs.send("service_1rnpxea", "template_sk137ts", templateParams);
-    })
-    .then(() => {
-      alert("Форма успешно отправлена. Ссылка на PDF отправлена по email.");
-    })
-    .catch((error) => {
-      console.error("Ошибка при отправке:", error);
-      alert("Ошибка отправки: " + error.message);
-    });
+  if (!email) {
+    alert("Пожалуйста, введите email.");
+    return;
   }
+
+  // Встраиваем изображение в PDF, если оно есть
+  if (preview && preview.src && preview.src.startsWith("data:image")) {
+    const img = document.createElement("img");
+    img.src = preview.src;
+    img.style.maxWidth = "100%";
+    img.style.marginTop = "10px";
+    pdfContent.appendChild(img);
+  }
+
+  html2pdf().set({
+    filename: 'oprosny_list.pdf',
+    html2canvas: { scale: 2 },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  })
+  .from(pdfContent)
+  .outputPdf('blob')
+  .then(function (pdfBlob) {
+    const file = new File([pdfBlob], "oprosny_list.pdf", { type: "application/pdf" });
+    const formData = new FormData();
+    formData.append("file", file);
+
+    return fetch("https://transfer.sh/oprosny_list.pdf", {
+      method: "POST",
+      body: formData
+    });
+  })
+  .then(response => response.text())
+  .then(link => {
+    const templateParams = {
+      to: email,
+      email: email,
+      company: company,
+      date: date,
+      contact_person: contact_person,
+      phone: phone,
+      country: country,
+      location: location,
+      material: material,
+      subject: "Новый опросный лист",
+      time: new Date().toLocaleString(),
+      pdf_link: link
+    };
+
+    return emailjs.send("service_1rnpxea", "template_sk137ts", templateParams);
+  })
+  .then(() => {
+    alert("Форма успешно отправлена. Ссылка на PDF отправлена по email.");
+  })
+  .catch((error) => {
+    console.error("Ошибка при отправке:", error);
+    alert("Ошибка отправки: " + error.message);
+  });
+}
 </script>
+
 
 
 
