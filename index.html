@@ -415,47 +415,34 @@
 
     
 <script>
-document.getElementById("installation_photo").addEventListener("change", function () {
-  const file = this.files[0];
-  const preview = document.getElementById("installation_preview");
+function bindPhotoPreview(section) {
+  const input = document.getElementById(`installation_photo_${section}`);
+  const preview = document.getElementById(`installation_preview_${section}`);
 
-  if (!file) {
-    preview.src = "";
-    preview.style.display = "none";
-    return;
-  }
+  if (!input || !preview) return;
 
-  if (!file.type.startsWith("image/")) {
-    alert("Загрузите файл формата JPG или PNG.");
-    preview.src = "";
-    preview.style.display = "none";
-    return;
-  }
+  input.addEventListener("change", function () {
+    const file = this.files[0];
 
-  const reader = new FileReader();
-  reader.onload = function (e) {
-    preview.src = e.target.result;
-    preview.style.display = "block";
-  };
-  reader.readAsDataURL(file);
-});
-  function showAnalyzerSection(value) {
-    document.querySelectorAll('.analyzer-section').forEach(section => {
-      section.style.display = 'none';
-    });
-    if (value) {
-      const section = document.getElementById(`section-${value}`);
-      if (section) section.style.display = 'block';
+    if (!file || !file.type.startsWith("image/")) {
+      alert("Загрузите файл формата JPG или PNG.");
+      preview.src = "";
+      preview.style.display = "none";
+      return;
     }
-  }
 
-  document.addEventListener("DOMContentLoaded", function () {
-    const materialSelect = document.getElementById("material");
-    materialSelect.addEventListener("change", function () {
-      showAnalyzerSection(this.value);
-    });
-    showAnalyzerSection(materialSelect.value);
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      preview.src = e.target.result;
+      preview.style.display = "block";
+    };
+    reader.readAsDataURL(file);
   });
+}
+
+// Вызовем функцию для всех секций
+["pulp", "sinter", "multiplex", "courier"].forEach(bindPhotoPreview);
+  
 function submitForm() {
   const form = document.getElementById("form");
   const pdfContent = document.getElementById("pdf-content");
