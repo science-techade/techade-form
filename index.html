@@ -440,13 +440,34 @@ function bindPhotoPreview(section) {
   });
 }
 
-// Вызовем функцию для всех секций
 ["pulp", "sinter", "multiplex", "courier"].forEach(bindPhotoPreview);
-  
+
+function showAnalyzerSection(value) {
+  document.querySelectorAll('.analyzer-section').forEach(section => {
+    section.style.display = 'none';
+  });
+  if (value) {
+    const section = document.getElementById(`section-${value}`);
+    if (section) section.style.display = 'block';
+  }
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  const materialSelect = document.getElementById("material");
+  if (materialSelect) {
+    materialSelect.addEventListener("change", function () {
+      showAnalyzerSection(this.value);
+    });
+    showAnalyzerSection(materialSelect.value);
+  }
+});
+
 function submitForm() {
   const form = document.getElementById("form");
   const pdfContent = document.getElementById("pdf-content");
-  const preview = document.getElementById("installation_preview");
+
+  const material = form.material.value;
+  const preview = document.getElementById(`installation_preview_${material}`);
 
   const email = form.email.value;
   const company = form.company.value;
@@ -455,14 +476,12 @@ function submitForm() {
   const phone = form.phone.value;
   const country = form.country.value;
   const location = form.location.value;
-  const material = form.material.value;
 
   if (!email) {
     alert("Пожалуйста, введите email.");
     return;
   }
 
-  // Встраиваем изображение в PDF, если оно есть
   if (preview && preview.src && preview.src.startsWith("data:image")) {
     const img = document.createElement("img");
     img.src = preview.src;
