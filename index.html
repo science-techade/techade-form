@@ -463,7 +463,47 @@
     });
   });
 
+function bindPhotoPreview(section) {
+  const input = document.getElementById(`installation_photo_${section}`);
+  const preview = document.getElementById(`installation_preview_${section}`);
 
+  if (!input || !preview) return;
+
+  input.addEventListener("change", function () {
+    const file = this.files[0];
+
+    if (!file || !file.type.match(/^image\/(jpeg|png)$/)) {
+      alert("Допустимы только JPG и PNG.");
+      preview.src = "";
+      preview.style.display = "none";
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      const img = new Image();
+      img.onload = function () {
+        // Создаём canvas и перерисовываем изображение в JPEG
+        const canvas = document.createElement("canvas");
+        canvas.width = img.width;
+        canvas.height = img.height;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0);
+        // конвертация в JPEG с качеством 0.9
+        const jpegDataUrl = canvas.toDataURL("image/jpeg", 0.9);
+        preview.src = jpegDataUrl;
+        preview.style.display = "block";
+        // сохраняем результат в data-* атрибуте для использования в PDF
+        preview.setAttribute("data-jpeg", jpegDataUrl);
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+// Применяем ко всем секциям
+["pulp", "sinter", "multiplex", "courier"].forEach(bindPhotoPreview);
 
 function submitForm() {
   const form = document.getElementById("form");
@@ -485,13 +525,13 @@ function submitForm() {
     return;
   }
 
-  if (preview && preview.src && preview.src.startsWith("data:image")) {
-    const img = document.createElement("img");
-    img.src = preview.src;
-    img.style.maxWidth = "100%";
-    img.style.marginTop = "10px";
-    pdfContent.appendChild(img);
-  }
+if (preview && preview.dataset.jpeg) {
+  const img = document.createElement("img");
+  img.src = preview.dataset.jpeg;
+  img.style.maxWidth = "100%";
+  img.style.marginTop = "10px";
+  pdfContent.appendChild(img);
+}
 
   html2pdf().set({
     filename: 'oprosny_list.pdf',
