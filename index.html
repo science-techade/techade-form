@@ -416,13 +416,31 @@
     
 <script>
 
-    document.addEventListener("DOMContentLoaded", function () {
-    document.getElementById('material').addEventListener('change', function () {
-      document.querySelectorAll('.analyzer-section').forEach(s => s.style.display = 'none');
-      const target = document.getElementById(`section-${this.value}`);
-      if (target) target.style.display = 'block';
-    });
-  });
+document.getElementById("installation_photo").addEventListener("change", function () {
+  const file = this.files[0];
+  const preview = document.getElementById("installation_preview");
+
+  if (!file) {
+    preview.src = "";
+    preview.style.display = "none";
+    return;
+  }
+
+  if (!file.type.startsWith("image/")) {
+    alert("Загрузите файл формата JPG или PNG.");
+    preview.src = "";
+    preview.style.display = "none";
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = function (e) {
+    preview.src = e.target.result;
+    preview.style.display = "block";
+  };
+  reader.readAsDataURL(file);
+});
+
 
   function submitForm() {
     const form = document.getElementById("form");
