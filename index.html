@@ -416,168 +416,173 @@
 <iframe id="pdf-preview" style="width: 100%; height: 500px; margin-top: 20px; display: none;"></iframe>
 
     
-<script>
-document.addEventListener("DOMContentLoaded", function () {
-  emailjs.init("lK76KGFPVwTGiY9vX"); 
-  const materialSelect = document.getElementById("material");
+<!-- Подключение актуального EmailJS SDK (v3) -->
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 
-  function showAnalyzerSection(value) {
-    document.querySelectorAll('.analyzer-section').forEach(section => {
-      section.style.display = 'none';
-    });
-    if (value) {
-      const section = document.getElementById(`section-${value}`);
-      if (section) {
-        section.style.display = 'block';
+<!-- Твоя логика -->
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    emailjs.init("lK76KGFPVwTGiY9vX");
+
+    const materialSelect = document.getElementById("material");
+
+    function showAnalyzerSection(value) {
+      document.querySelectorAll('.analyzer-section').forEach(section => {
+        section.style.display = 'none';
+      });
+      if (value) {
+        const section = document.getElementById(`section-${value}`);
+        if (section) {
+          section.style.display = 'block';
+        }
       }
     }
-  }
 
-  materialSelect.addEventListener("change", function () {
-    showAnalyzerSection(this.value);
-  });
-
-  showAnalyzerSection(materialSelect.value);
-
-  ["pulp", "sinter", "multiplex", "courier"].forEach(bindPhotoPreview);
-});
-
-function bindPhotoPreview(section) {
-  const input = document.getElementById(`installation_photo_${section}`);
-  const preview = document.getElementById(`installation_preview_${section}`);
-  if (!input || !preview) return;
-
-  input.addEventListener("change", function () {
-    const file = this.files[0];
-    if (!file || !file.type.match(/^image\/(jpe?g|png)$/)) {
-      alert("Загрузите JPG или PNG.");
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onload = function (e) {
-      const img = new Image();
-      img.crossOrigin = "anonymous";
-      img.onload = function () {
-        const canvas = document.createElement("canvas");
-        canvas.width = img.width;
-        canvas.height = img.height;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0);
-        const jpegDataUrl = canvas.toDataURL("image/jpeg", 0.9);
-        input.setAttribute("data-jpeg", jpegDataUrl);
-        preview.src = jpegDataUrl;
-        preview.style.display = "block";
-      };
-      img.src = e.target.result;
-    };
-    reader.readAsDataURL(file);
-  });
-}
-
-function submitForm() {
-  const form = document.getElementById("form");
-  const pdfContent = document.getElementById("pdf-content");
-  const pdfPreview = document.getElementById("pdf-preview");
-
-  // Удаляем неподдерживаемые <img>
-  pdfContent.querySelectorAll("img").forEach(img => {
-    if (
-      !img.src ||
-      img.src === window.location.href ||
-      img.src === "about:blank" ||
-      img.src.startsWith("data:image/svg") ||
-      img.src.startsWith("blob:")
-    ) {
-      img.remove();
-    }
-  });
-
-  // Удаляем превьюшки установки
-  pdfContent.querySelectorAll("img[id^='installation_preview_']").forEach(img => img.remove());
-
-  const material = form.material.value;
-  const photoInput = document.getElementById(`installation_photo_${material}`);
-  const jpegData = photoInput?.dataset?.jpeg;
-
-  const email = form.email.value;
-  if (!email) return alert("Введите email");
-
-  let tempImg;
-  if (jpegData) {
-    tempImg = document.createElement("img");
-    tempImg.src = jpegData;
-    tempImg.style.maxWidth = "100%";
-    tempImg.style.marginTop = "10px";
-    pdfContent.appendChild(tempImg);
-  }
-
-  // Удаляем SVG и фоновые изображения
-  pdfContent.querySelectorAll("svg").forEach(svg => svg.remove());
-  pdfContent.querySelectorAll("*").forEach(el => {
-    const style = window.getComputedStyle(el);
-    if (style.backgroundImage && style.backgroundImage !== 'none') {
-      el.style.backgroundImage = 'none';
-    }
-  });
-
-  html2pdf().set({
-    html2canvas: { scale: 2, useCORS: true },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-  }).from(pdfContent).output('datauristring')
-    .then(pdfDataUri => {
-      pdfPreview.src = pdfDataUri;
-      pdfPreview.style.display = 'block';
-
-      return html2pdf().set({
-        filename: 'oprosny_list.pdf',
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      }).from(pdfContent).outputPdf('blob');
-    })
-    .then(pdfBlob => {
-  const formData = new FormData();
-  formData.append("file", new File([pdfBlob], "oprosny_list.pdf", { type: "application/pdf" }));
-
-  return fetch("https://tmpfiles.org/api/v1/upload", {
-    method: "POST",
-    body: formData
-  });
-})
-.then(response => response.json())
-.then(data => {
-  if (!data || !data.data || !data.data.url) throw new Error("Не удалось получить ссылку на PDF");
-  return data.data.url;
-})
-    .then(link => {
-      const templateParams = {
-        to: email,
-        email: email,
-        company: form.company.value,
-        date: form.date.value,
-        contact_person: form.contact_person.value,
-        phone: form.phone.value,
-        country: form.country.value,
-        location: form.location.value,
-        material: material,
-        subject: "Новый опросный лист",
-        time: new Date().toLocaleString(),
-        pdf_link: link
-      };
-
-      return emailjs.send("service_1rnpxea", "template_sk137ts", templateParams);
-    })
-    .then(() => alert("Форма отправлена. Ссылка на PDF отправлена по email."))
-    .catch((error) => {
-      console.error("Ошибка при отправке:", error);
-      alert("Ошибка отправки: " + error.message);
-    })
-    .finally(() => {
-      if (tempImg) tempImg.remove();
+    materialSelect.addEventListener("change", function () {
+      showAnalyzerSection(this.value);
     });
-}
 
+    showAnalyzerSection(materialSelect.value);
+
+    ["pulp", "sinter", "multiplex", "courier"].forEach(bindPhotoPreview);
+  });
+
+  function bindPhotoPreview(section) {
+    const input = document.getElementById(`installation_photo_${section}`);
+    const preview = document.getElementById(`installation_preview_${section}`);
+    if (!input || !preview) return;
+
+    input.addEventListener("change", function () {
+      const file = this.files[0];
+      if (!file || !file.type.match(/^image\/(jpe?g|png)$/)) {
+        alert("Загрузите JPG или PNG.");
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = function (e) {
+        const img = new Image();
+        img.crossOrigin = "anonymous";
+        img.onload = function () {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.width;
+          canvas.height = img.height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0);
+          const jpegDataUrl = canvas.toDataURL("image/jpeg", 0.9);
+          input.setAttribute("data-jpeg", jpegDataUrl);
+          preview.src = jpegDataUrl;
+          preview.style.display = "block";
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function submitForm() {
+    const form = document.getElementById("form");
+    const pdfContent = document.getElementById("pdf-content");
+    const pdfPreview = document.getElementById("pdf-preview");
+
+    // Удаляем неподдерживаемые изображения
+    pdfContent.querySelectorAll("img").forEach(img => {
+      if (
+        !img.src ||
+        img.src === window.location.href ||
+        img.src === "about:blank" ||
+        img.src.startsWith("data:image/svg") ||
+        img.src.startsWith("blob:")
+      ) {
+        img.remove();
+      }
+    });
+
+    // Удаляем превью установки
+    pdfContent.querySelectorAll("img[id^='installation_preview_']").forEach(img => img.remove());
+
+    const material = form.material.value;
+    const photoInput = document.getElementById(`installation_photo_${material}`);
+    const jpegData = photoInput?.dataset?.jpeg;
+
+    const email = form.email.value;
+    if (!email) return alert("Введите email");
+
+    let tempImg;
+    if (jpegData) {
+      tempImg = document.createElement("img");
+      tempImg.src = jpegData;
+      tempImg.style.maxWidth = "100%";
+      tempImg.style.marginTop = "10px";
+      pdfContent.appendChild(tempImg);
+    }
+
+    // Удаляем SVG и background-image
+    pdfContent.querySelectorAll("svg").forEach(svg => svg.remove());
+    pdfContent.querySelectorAll("*").forEach(el => {
+      const style = window.getComputedStyle(el);
+      if (style.backgroundImage && style.backgroundImage !== 'none') {
+        el.style.backgroundImage = 'none';
+      }
+    });
+
+    html2pdf().set({
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    }).from(pdfContent).output('datauristring')
+      .then(pdfDataUri => {
+        pdfPreview.src = pdfDataUri;
+        pdfPreview.style.display = 'block';
+
+        return html2pdf().set({
+          filename: 'oprosny_list.pdf',
+          html2canvas: { scale: 2, useCORS: true },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+        }).from(pdfContent).outputPdf('blob');
+      })
+      .then(pdfBlob => {
+        const formData = new FormData();
+        formData.append("file", new File([pdfBlob], "oprosny_list.pdf", { type: "application/pdf" }));
+
+        return fetch("https://tmpfiles.org/api/v1/upload", {
+          method: "POST",
+          body: formData
+        });
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (!data || !data.data || !data.data.url) throw new Error("Не удалось получить ссылку на PDF");
+        return data.data.url;
+      })
+      .then(link => {
+        const templateParams = {
+          to: email,
+          email: email,
+          company: form.company.value,
+          date: form.date.value,
+          contact_person: form.contact_person.value,
+          phone: form.phone.value,
+          country: form.country.value,
+          location: form.location.value,
+          material: material,
+          subject: "Новый опросный лист",
+          time: new Date().toLocaleString(),
+          pdf_link: link
+        };
+
+        return emailjs.send("service_1rnpxea", "template_sk137ts", templateParams);
+      })
+      .then(() => alert("Форма отправлена. Ссылка на PDF отправлена по email."))
+      .catch((error) => {
+        console.error("Ошибка при отправке:", error);
+        alert("Ошибка отправки: " + (error?.message || error));
+      })
+      .finally(() => {
+        if (tempImg) tempImg.remove();
+      });
+  }
 </script>
+
 
 
 
