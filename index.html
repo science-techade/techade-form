@@ -479,12 +479,22 @@ function submitForm() {
   const pdfContent = document.getElementById("pdf-content");
   const pdfPreview = document.getElementById("pdf-preview");
 
-  // Удаляем некорректные или пустые изображения
+  // Удаляем неподдерживаемые <img>
   pdfContent.querySelectorAll("img").forEach(img => {
-    if (!img.src || img.src === window.location.href) {
+    if (
+      !img.src ||
+      img.src === window.location.href ||
+      img.src === "about:blank" ||
+      img.src.startsWith("data:image/svg") ||
+      img.src.startsWith("blob:")
+    ) {
       img.remove();
     }
   });
+
+  // Удаляем превьюшки установки
+  pdfContent.querySelectorAll("img[id^='installation_preview_']").forEach(img => img.remove());
+ 
 
   const material = form.material.value;
   const photoInput = document.getElementById(`installation_photo_${material}`);
