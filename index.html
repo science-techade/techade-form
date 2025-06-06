@@ -407,9 +407,9 @@
   </div>
     </div>
     </div>
-    <div class="mb-3">
-  <button type="button" class="btn btn-primary" onclick="submitForm()">Отправить</button>
-</div>
+  <div class="mb-3">
+    <button id="submit-button" type="button" class="btn btn-primary">Отправить</button>
+  </div>
 </form>
 
 
@@ -423,15 +423,16 @@
     emailjs.init("lK76KGFPVwTGiY9vX");
 
     const materialSelect = document.getElementById("material");
-    materialSelect.addEventListener("change", () => {
-      showAnalyzerSection(materialSelect.value);
-    });
-
+    materialSelect.addEventListener("change", () => showAnalyzerSection(materialSelect.value));
     showAnalyzerSection(materialSelect.value);
 
     ["pulp", "sinter", "multiplex", "courier"].forEach(bindPhotoPreview);
 
-    document.getElementById("submit-button").addEventListener("click", submitForm);
+    // ✅ Добавляем обработчик клика по кнопке отправки
+  const submitBtn = document.getElementById("submit-button");
+  if (submitBtn) {
+    submitBtn.addEventListener("click", submitForm);
+  }
   });
 
   function showAnalyzerSection(value) {
