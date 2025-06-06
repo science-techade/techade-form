@@ -480,7 +480,7 @@
   }
 
   function generatePrintableContent(form, material) {
-    const source = document.getElementById("pdf-content");
+    const source = document.getElementById("form");
     const clone = source.cloneNode(true);
 
     // Показать нужный раздел
@@ -519,8 +519,13 @@
       img.style.marginTop = "10px";
       clone.appendChild(img);
     }
+    
 
-    return clone;
+// Оставим только содержимое #pdf-content
+const final = document.createElement("div");
+const content = clone.querySelector("#pdf-content");
+if (content) final.appendChild(content);
+return final;
   }
 
   function addElementRow(containerId) {
