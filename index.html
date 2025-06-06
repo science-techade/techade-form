@@ -512,10 +512,8 @@ function submitForm() {
     pdfContent.appendChild(tempImg);
   }
 
-  // Удаляем все SVG-элементы
+  // Удаляем SVG и фоновые изображения
   pdfContent.querySelectorAll("svg").forEach(svg => svg.remove());
-
-  // Удаляем все background-image (в том числе SVG и другие)
   pdfContent.querySelectorAll("*").forEach(el => {
     const style = window.getComputedStyle(el);
     if (style.backgroundImage && style.backgroundImage !== 'none') {
@@ -541,14 +539,15 @@ function submitForm() {
       const file = new File([pdfBlob], "oprosny_list.pdf", { type: "application/pdf" });
       const formData = new FormData();
       formData.append("file", file);
-      return fetch("https://transfer.sh/oprosny_list.pdf", {
+      return fetch("https://file.io/?expires=1w", {
         method: "POST",
         body: formData
       });
     })
-    .then(response => {
-      if (!response.ok) throw new Error("Ошибка загрузки PDF");
-      return response.text();
+    .then(response => response.json())
+    .then(data => {
+      if (!data.success) throw new Error("Ошибка загрузки PDF");
+      return data.link;
     })
     .then(link => {
       const templateParams = {
@@ -577,6 +576,7 @@ function submitForm() {
       if (tempImg) tempImg.remove();
     });
 }
+
 </script>
 
 
