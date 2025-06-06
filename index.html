@@ -423,16 +423,19 @@
     emailjs.init("lK76KGFPVwTGiY9vX");
 
     const materialSelect = document.getElementById("material");
-    materialSelect.addEventListener("change", () => showAnalyzerSection(materialSelect.value));
-    showAnalyzerSection(materialSelect.value);
+    if (materialSelect) {
+      materialSelect.addEventListener("change", () => {
+        showAnalyzerSection(materialSelect.value);
+      });
+      showAnalyzerSection(materialSelect.value);
+    }
 
     ["pulp", "sinter", "multiplex", "courier"].forEach(bindPhotoPreview);
 
-    // ✅ Добавляем обработчик клика по кнопке отправки
-  const submitBtn = document.getElementById("submit-button");
-  if (submitBtn) {
-    submitBtn.addEventListener("click", submitForm);
-  }
+    const submitBtn = document.getElementById("submit-button");
+    if (submitBtn) {
+      submitBtn.addEventListener("click", submitForm);
+    }
   });
 
   function showAnalyzerSection(value) {
@@ -480,7 +483,7 @@
     const source = document.getElementById("pdf-content");
     const clone = source.cloneNode(true);
 
-    // Показать активный блок анализатора
+    // Показать нужный раздел
     clone.querySelectorAll('.analyzer-section').forEach(section => {
       section.style.display = 'none';
     });
@@ -503,12 +506,10 @@
       el.replaceWith(div);
     });
 
-    // Скопировать динамически добавленные строки элементов
-    clone.querySelectorAll(".element-row").forEach(row => {
-      row.querySelectorAll("button").forEach(btn => btn.remove()); // удалить кнопки
-    });
+    // Удалить кнопки
+    clone.querySelectorAll("button").forEach(btn => btn.remove());
 
-    // Добавить изображение, если есть
+    // Добавить изображение
     const photoInput = document.getElementById(`installation_photo_${material}`);
     const jpegData = photoInput?.dataset?.jpeg;
     if (jpegData) {
@@ -521,6 +522,38 @@
 
     return clone;
   }
+
+  function addElementRow(containerId) {
+    const container = document.getElementById(containerId);
+    const wrapper = document.createElement("div");
+    wrapper.className = "element-row";
+
+    const inputElement = document.createElement("input");
+    inputElement.type = "text";
+    inputElement.placeholder = "Элемент (напр. Fe)";
+    inputElement.name = `${containerId}_element[]`;
+    inputElement.className = "form-control";
+
+    const inputRange = document.createElement("input");
+    inputRange.type = "text";
+    inputRange.placeholder = "Диапазон концентрации";
+    inputRange.name = `${containerId}_range[]`;
+    inputRange.className = "form-control";
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "btn btn-outline-danger btn-sm";
+    removeBtn.textContent = "Удалить";
+    removeBtn.onclick = () => wrapper.remove();
+
+    wrapper.appendChild(inputElement);
+    wrapper.appendChild(inputRange);
+    wrapper.appendChild(removeBtn);
+    container.appendChild(wrapper);
+  }
+
+  // 👇 Сделать доступной из HTML
+  window.addElementRow = addElementRow;
 
   function submitForm() {
     const form = document.getElementById("form");
@@ -580,6 +613,7 @@
       });
   }
 </script>
+
 
 
 
