@@ -539,7 +539,7 @@ function submitForm() {
       const file = new File([pdfBlob], "oprosny_list.pdf", { type: "application/pdf" });
       const formData = new FormData();
       formData.append("file", file);
-      return fetch("https://file.io/?expires=1w", {
+      return fetch("https://www.file.io/?expires=1w", {
         method: "POST",
         body: formData
       });
