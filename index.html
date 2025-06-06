@@ -470,18 +470,37 @@
     });
   }
 
-  function generatePrintableContent() {
-    const original = document.getElementById("form");
+  function generatePrintableContent(form, material) {
+    const original = document.getElementById("pdf-content");
     const clone = original.cloneNode(true);
 
-    // Заменяем все поля ввода и select на текст
+    // Заменяем input/select/textarea на текст
     clone.querySelectorAll("input, select, textarea").forEach(el => {
-      const value = el.type === "checkbox" ? (el.checked ? "✔ Да" : "— Нет") : el.value;
-      const span = document.createElement("div");
-      span.textContent = value;
-      span.style.marginBottom = "4px";
-      el.replaceWith(span);
+      let value = "—";
+      if (el.type === "checkbox") {
+        value = el.checked ? "✔ Да" : "— Нет";
+      } else if (el.type === "file") {
+        value = "";
+      } else {
+        value = el.value;
+      }
+
+      const div = document.createElement("div");
+      div.textContent = value;
+      div.style.marginBottom = "4px";
+      el.replaceWith(div);
     });
+
+    // Добавляем изображение (если есть)
+    const photoInput = document.getElementById(`installation_photo_${material}`);
+    const jpegData = photoInput?.dataset?.jpeg;
+    if (jpegData) {
+      const img = document.createElement("img");
+      img.src = jpegData;
+      img.style.maxWidth = "100%";
+      img.style.marginTop = "10px";
+      clone.appendChild(img);
+    }
 
     // Удаляем кнопки
     clone.querySelectorAll("button").forEach(btn => btn.remove());
@@ -521,24 +540,12 @@
   function submitForm() {
     const form = document.getElementById("form");
     const pdfPreview = document.getElementById("pdf-preview");
-
-    const material = form.material.value;
-    const photoInput = document.getElementById(`installation_photo_${material}`);
-    const jpegData = photoInput?.dataset?.jpeg;
-
     const email = form.email.value;
+    const material = form.material.value;
+
     if (!email) return alert("Введите email");
 
-    let tempImg;
-    if (jpegData) {
-      tempImg = document.createElement("img");
-      tempImg.src = jpegData;
-      tempImg.style.maxWidth = "100%";
-      tempImg.style.marginTop = "10px";
-      document.getElementById("pdf-content").appendChild(tempImg);
-    }
-
-    const printableContent = generatePrintableContent();
+    const printableContent = generatePrintableContent(form, material);
 
     html2pdf().set({
       html2canvas: { scale: 2, useCORS: true },
@@ -589,12 +596,10 @@
       .catch((error) => {
         console.error("Ошибка при отправке:", error);
         alert("Ошибка отправки: " + (error?.message || error));
-      })
-      .finally(() => {
-        if (tempImg) tempImg.remove();
       });
   }
 </script>
+
 
 
 
