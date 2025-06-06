@@ -520,12 +520,7 @@
       clone.appendChild(img);
     }
     
-
-// Оставим только содержимое #pdf-content
-const final = document.createElement("div");
-const content = clone.querySelector("#pdf-content");
-if (content) final.appendChild(content);
-return final;
+  return clone;
   }
 
   function addElementRow(containerId) {
