@@ -587,10 +587,17 @@
   const wrapper = document.createElement("div");
   wrapper.className = "element-row";
 
-  const input = document.createElement("input");
-  input.type = "text";
-  input.name = `${containerId}[]`;
-  input.className = "form-control";
+  const inputElement = document.createElement("input");
+  inputElement.type = "text";
+  inputElement.placeholder = "Элемент (напр. Fe)";
+  inputElement.name = `${containerId}_element[]`;
+  inputElement.className = "form-control";
+
+  const inputRange = document.createElement("input");
+  inputRange.type = "text";
+  inputRange.placeholder = "Диапазон концентрации";
+  inputRange.name = `${containerId}_range[]`;
+  inputRange.className = "form-control";
 
   const removeBtn = document.createElement("button");
   removeBtn.type = "button";
@@ -598,10 +605,13 @@
   removeBtn.textContent = "Удалить";
   removeBtn.onclick = () => wrapper.remove();
 
-  wrapper.appendChild(input);
+  wrapper.appendChild(inputElement);
+  wrapper.appendChild(inputRange);
   wrapper.appendChild(removeBtn);
+
   container.appendChild(wrapper);
 }
+
 </script>
 
 
