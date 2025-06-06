@@ -536,19 +536,19 @@ function submitForm() {
       }).from(pdfContent).outputPdf('blob');
     })
     .then(pdfBlob => {
-      const file = new File([pdfBlob], "oprosny_list.pdf", { type: "application/pdf" });
-      const formData = new FormData();
-      formData.append("file", file);
-      return fetch("https://www.file.io/?expires=1w", {
-        method: "POST",
-        body: formData
-      });
-    })
-    .then(response => response.json())
-    .then(data => {
-      if (!data.success) throw new Error("Ошибка загрузки PDF");
-      return data.link;
-    })
+  const formData = new FormData();
+  formData.append("file", new File([pdfBlob], "oprosny_list.pdf", { type: "application/pdf" }));
+
+  return fetch("https://tmpfiles.org/api/v1/upload", {
+    method: "POST",
+    body: formData
+  });
+})
+.then(response => response.json())
+.then(data => {
+  if (!data || !data.data || !data.data.url) throw new Error("Не удалось получить ссылку на PDF");
+  return data.data.url;
+})
     .then(link => {
       const templateParams = {
         to: email,
