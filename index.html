@@ -479,6 +479,13 @@ function submitForm() {
   const pdfContent = document.getElementById("pdf-content");
   const pdfPreview = document.getElementById("pdf-preview");
 
+  // Удаляем некорректные или пустые изображения
+  pdfContent.querySelectorAll("img").forEach(img => {
+    if (!img.src || img.src === window.location.href) {
+      img.remove();
+    }
+  });
+
   const material = form.material.value;
   const photoInput = document.getElementById(`installation_photo_${material}`);
   const jpegData = photoInput?.dataset?.jpeg;
@@ -486,7 +493,6 @@ function submitForm() {
   const email = form.email.value;
   if (!email) return alert("Введите email");
 
-  // Вставим <img> перед отправкой
   let tempImg;
   if (jpegData) {
     tempImg = document.createElement("img");
@@ -496,22 +502,21 @@ function submitForm() {
     pdfContent.appendChild(tempImg);
   }
 
-  // Сначала ПРЕДПРОСМОТР
   html2pdf().set({
-    html2canvas: { scale: 2, useCORS: false },
+    html2canvas: { scale: 2, useCORS: true },
     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
   }).from(pdfContent).output('datauristring')
     .then(pdfDataUri => {
       pdfPreview.src = pdfDataUri;
       pdfPreview.style.display = 'block';
+
       return html2pdf().set({
         filename: 'oprosny_list.pdf',
-        html2canvas: { scale: 2, useCORS: false },
+        html2canvas: { scale: 2, useCORS: true },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
       }).from(pdfContent).outputPdf('blob');
     })
     .then(pdfBlob => {
-      if (tempImg) tempImg.remove(); // удаляем из DOM
       const file = new File([pdfBlob], "oprosny_list.pdf", { type: "application/pdf" });
       const formData = new FormData();
       formData.append("file", file);
@@ -520,7 +525,10 @@ function submitForm() {
         body: formData
       });
     })
-    .then(response => response.text())
+    .then(response => {
+      if (!response.ok) throw new Error("Ошибка загрузки PDF");
+      return response.text();
+    })
     .then(link => {
       const templateParams = {
         to: email,
@@ -543,6 +551,9 @@ function submitForm() {
     .catch((error) => {
       console.error("Ошибка при отправке:", error);
       alert("Ошибка отправки: " + error.message);
+    })
+    .finally(() => {
+      if (tempImg) tempImg.remove();
     });
 }
 
