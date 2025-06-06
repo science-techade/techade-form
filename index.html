@@ -474,6 +474,7 @@ function bindPhotoPreview(section) {
     reader.readAsDataURL(file);
   });
 }
+
 function submitForm() {
   const form = document.getElementById("form");
   const pdfContent = document.getElementById("pdf-content");
@@ -494,7 +495,6 @@ function submitForm() {
 
   // Удаляем превьюшки установки
   pdfContent.querySelectorAll("img[id^='installation_preview_']").forEach(img => img.remove());
- 
 
   const material = form.material.value;
   const photoInput = document.getElementById(`installation_photo_${material}`);
@@ -511,6 +511,17 @@ function submitForm() {
     tempImg.style.marginTop = "10px";
     pdfContent.appendChild(tempImg);
   }
+
+  // Удаляем все SVG-элементы
+  pdfContent.querySelectorAll("svg").forEach(svg => svg.remove());
+
+  // Удаляем все background-image (в том числе SVG и другие)
+  pdfContent.querySelectorAll("*").forEach(el => {
+    const style = window.getComputedStyle(el);
+    if (style.backgroundImage && style.backgroundImage !== 'none') {
+      el.style.backgroundImage = 'none';
+    }
+  });
 
   html2pdf().set({
     html2canvas: { scale: 2, useCORS: true },
@@ -566,8 +577,8 @@ function submitForm() {
       if (tempImg) tempImg.remove();
     });
 }
-
 </script>
+
 
 
 
