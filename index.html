@@ -417,71 +417,19 @@
 
     
 <!-- Подключение актуального EmailJS SDK (v3) -->
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 <script>
-  document.addEventListener("DOMContentLoaded", function () {
-    emailjs.init("lK76KGFPVwTGiY9vX");
-
-    const materialSelect = document.getElementById("material");
-    materialSelect.addEventListener("change", () => showAnalyzerSection(materialSelect.value));
-    showAnalyzerSection(materialSelect.value); // просто отображение
-
-    ["pulp", "sinter", "multiplex", "courier"].forEach(bindPhotoPreview);
-  });
-
-  function showAnalyzerSection(value) {
-    document.querySelectorAll('.analyzer-section').forEach(section => {
-      section.style.display = 'none';
-    });
-    const section = document.getElementById(`section-${value}`);
-    if (section) section.style.display = 'block';
-  }
-
-  function bindPhotoPreview(section) {
-    const input = document.getElementById(`installation_photo_${section}`);
-    const preview = document.getElementById(`installation_preview_${section}`);
-    if (!input || !preview) return;
-
-    input.addEventListener("change", function () {
-      const file = this.files[0];
-      if (!file || !file.type.match(/^image\/(jpe?g|png)$/)) {
-        alert("Загрузите JPG или PNG.");
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.onload = function () {
-          const canvas = document.createElement("canvas");
-          canvas.width = img.width;
-          canvas.height = img.height;
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(img, 0, 0);
-          const jpegDataUrl = canvas.toDataURL("image/jpeg", 0.9);
-          input.setAttribute("data-jpeg", jpegDataUrl);
-          preview.src = jpegDataUrl;
-          preview.style.display = "block";
-        };
-        img.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
-    });
-  }
-
   function generatePrintableContent(form, material) {
     const original = document.getElementById("pdf-content");
     const clone = original.cloneNode(true);
 
-    // 👇 ВАЖНО: отобразим активную секцию
+    // Показываем только активную секцию
     clone.querySelectorAll('.analyzer-section').forEach(section => {
       section.style.display = 'none';
     });
     const visible = clone.querySelector(`#section-${material}`);
     if (visible) visible.style.display = 'block';
 
-    // Заменим inputs и др. элементы на текст
+    // Обрабатываем input, select, textarea
     clone.querySelectorAll("input, select, textarea").forEach(el => {
       let value = "—";
       if (el.type === "checkbox") {
@@ -498,6 +446,45 @@
       el.replaceWith(div);
     });
 
+    // 🔽 Заменяем все .element-row на таблицы
+    clone.querySelectorAll(".element-row").forEach(row => {
+      const container = row.parentElement;
+      if (!container.classList.contains("table-ready")) {
+        const table = document.createElement("table");
+        table.style.width = "100%";
+        table.style.borderCollapse = "collapse";
+        table.style.marginBottom = "10px";
+        table.style.fontSize = "14px";
+
+        const thead = document.createElement("thead");
+        thead.innerHTML = `
+          <tr>
+            <th style="border:1px solid #ccc; padding:4px;">Элемент</th>
+            <th style="border:1px solid #ccc; padding:4px;">Диапазон концентрации</th>
+          </tr>
+        `;
+        table.appendChild(thead);
+
+        const tbody = document.createElement("tbody");
+        container.querySelectorAll(".element-row").forEach(row => {
+          const el = row.querySelector("input[name*='_element']");
+          const range = row.querySelector("input[name*='_range']");
+
+          const tr = document.createElement("tr");
+          tr.innerHTML = `
+            <td style="border:1px solid #ccc; padding:4px;">${el?.value || "—"}</td>
+            <td style="border:1px solid #ccc; padding:4px;">${range?.value || "—"}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        table.appendChild(tbody);
+        container.innerHTML = ""; // очищаем блок от старого содержимого
+        container.classList.add("table-ready");
+        container.appendChild(table);
+      }
+    });
+
     // Добавим фото, если есть
     const photoInput = document.getElementById(`installation_photo_${material}`);
     const jpegData = photoInput?.dataset?.jpeg;
@@ -509,101 +496,10 @@
       clone.appendChild(img);
     }
 
-    // Удалим все кнопки
+    // Удаляем все кнопки
     clone.querySelectorAll("button").forEach(btn => btn.remove());
 
     return clone;
-  }
-
-  function addElementRow(containerId) {
-    const container = document.getElementById(containerId);
-    const wrapper = document.createElement("div");
-    wrapper.className = "element-row";
-
-    const inputElement = document.createElement("input");
-    inputElement.type = "text";
-    inputElement.placeholder = "Элемент (напр. Fe)";
-    inputElement.name = `${containerId}_element[]`;
-    inputElement.className = "form-control";
-
-    const inputRange = document.createElement("input");
-    inputRange.type = "text";
-    inputRange.placeholder = "Диапазон концентрации";
-    inputRange.name = `${containerId}_range[]`;
-    inputRange.className = "form-control";
-
-    const removeBtn = document.createElement("button");
-    removeBtn.type = "button";
-    removeBtn.className = "btn btn-outline-danger btn-sm";
-    removeBtn.textContent = "Удалить";
-    removeBtn.onclick = () => wrapper.remove();
-
-    wrapper.appendChild(inputElement);
-    wrapper.appendChild(inputRange);
-    wrapper.appendChild(removeBtn);
-    container.appendChild(wrapper);
-  }
-
-  function submitForm() {
-    const form = document.getElementById("form");
-    const pdfPreview = document.getElementById("pdf-preview");
-    const email = form.email.value;
-    const material = form.material.value;
-
-    if (!email) return alert("Введите email");
-
-    const printableContent = generatePrintableContent(form, material);
-
-    html2pdf().set({
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    }).from(printableContent).output('datauristring')
-      .then(pdfDataUri => {
-        pdfPreview.src = pdfDataUri;
-        pdfPreview.style.display = 'block';
-
-        return html2pdf().set({
-          filename: 'oprosny_list.pdf',
-          html2canvas: { scale: 2, useCORS: true },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        }).from(printableContent).outputPdf('blob');
-      })
-      .then(pdfBlob => {
-        const formData = new FormData();
-        formData.append("file", new File([pdfBlob], "oprosny_list.pdf", { type: "application/pdf" }));
-        return fetch("https://tmpfiles.org/api/v1/upload", {
-          method: "POST",
-          body: formData
-        });
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (!data || !data.data || !data.data.url) throw new Error("Не удалось получить ссылку на PDF");
-        return data.data.url;
-      })
-      .then(link => {
-        const templateParams = {
-          to: `${email}, science.techade@gmail.com`,
-          email: email,
-          company: form.company.value,
-          date: form.date.value,
-          contact_person: form.contact_person.value,
-          phone: form.phone.value,
-          country: form.country.value,
-          location: form.location.value,
-          material: material,
-          subject: "Новый опросный лист",
-          time: new Date().toLocaleString(),
-          pdf_link: link
-        };
-
-        return emailjs.send("service_1rnpxea", "template_sk137ts", templateParams);
-      })
-      .then(() => alert("Форма отправлена. Ссылка на PDF отправлена по email."))
-      .catch((error) => {
-        console.error("Ошибка при отправке:", error);
-        alert("Ошибка отправки: " + (error?.message || error));
-      });
   }
 </script>
 
