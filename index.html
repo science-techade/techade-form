@@ -419,7 +419,7 @@
 <!-- Подключение актуального EmailJS SDK (v3) -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 
-<!-- Твоя логика -->
+
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     emailjs.init("lK76KGFPVwTGiY9vX");
@@ -581,6 +581,27 @@
         if (tempImg) tempImg.remove();
       });
   }
+
+  function addElementRow(containerId) {
+  const container = document.getElementById(containerId);
+  const wrapper = document.createElement("div");
+  wrapper.className = "element-row";
+
+  const input = document.createElement("input");
+  input.type = "text";
+  input.name = `${containerId}[]`;
+  input.className = "form-control";
+
+  const removeBtn = document.createElement("button");
+  removeBtn.type = "button";
+  removeBtn.className = "btn btn-outline-danger btn-sm";
+  removeBtn.textContent = "Удалить";
+  removeBtn.onclick = () => wrapper.remove();
+
+  wrapper.appendChild(input);
+  wrapper.appendChild(removeBtn);
+  container.appendChild(wrapper);
+}
 </script>
 
 
