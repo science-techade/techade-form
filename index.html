@@ -424,7 +424,7 @@
 
     const materialSelect = document.getElementById("material");
     materialSelect.addEventListener("change", () => showAnalyzerSection(materialSelect.value));
-    showAnalyzerSection(materialSelect.value);
+    showAnalyzerSection(materialSelect.value); // Только отображение секции, без отправки
 
     ["pulp", "sinter", "multiplex", "courier"].forEach(bindPhotoPreview);
   });
@@ -474,7 +474,6 @@
     const original = document.getElementById("pdf-content");
     const clone = original.cloneNode(true);
 
-    // Заменяем input/select/textarea на текст
     clone.querySelectorAll("input, select, textarea").forEach(el => {
       let value = "—";
       if (el.type === "checkbox") {
@@ -491,7 +490,7 @@
       el.replaceWith(div);
     });
 
-    // Добавляем изображение (если есть)
+    // Добавляем картинку, если есть
     const photoInput = document.getElementById(`installation_photo_${material}`);
     const jpegData = photoInput?.dataset?.jpeg;
     if (jpegData) {
