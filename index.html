@@ -565,6 +565,12 @@
 
     const content = generatePrintableContent(form, material);
 
+    const tempContainer = document.createElement("div");
+tempContainer.style.position = "fixed";
+tempContainer.style.top = "-9999px";
+tempContainer.appendChild(content);
+document.body.appendChild(tempContainer);
+
     html2pdf().set({
       html2canvas: { scale: 2, useCORS: true },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
@@ -579,6 +585,11 @@
         }).from(content).outputPdf('blob');
       })
       .then(blob => {
+
+        // Удаляем временный контейнер после создания PDF
+        document.body.removeChild(tempContainer);
+
+        
         const file = new File([blob], "oprosny_list.pdf", { type: "application/pdf" });
         const formData = new FormData();
         formData.append("file", file);
