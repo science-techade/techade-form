@@ -417,7 +417,6 @@
 
     
 <!-- Подключение EmailJS и html2pdf -->
-<!-- Подключение EmailJS и html2pdf -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script>
@@ -489,26 +488,32 @@
 
     if (!email) return alert("Введите email");
 
-    // Клонируем форму
     const clone = form.cloneNode(true);
-
-    // Принудительно показываем выбранную секцию
     const visibleSection = clone.querySelector(`#section-${material}`);
     if (visibleSection) {
       visibleSection.style.display = "block";
     }
 
-    // Заменяем поля ввода на текст
     clone.querySelectorAll("input, select, textarea").forEach(el => {
       const div = document.createElement("div");
       div.textContent = el.type === "checkbox" ? (el.checked ? "✔ Да" : "— Нет") : el.value || "—";
       el.replaceWith(div);
     });
 
-    // Удаляем кнопки
     clone.querySelectorAll("button").forEach(btn => btn.remove());
 
-    // Добавляем изображение, если есть
+    document.querySelectorAll(".element-row").forEach(row => {
+      const rowClone = row.cloneNode(true);
+      rowClone.querySelectorAll("input").forEach(el => {
+        const span = document.createElement("div");
+        span.textContent = el.value || "—";
+        el.replaceWith(span);
+      });
+      rowClone.querySelectorAll("button").forEach(btn => btn.remove());
+      const container = clone.querySelector(`#${row.parentElement.id}`);
+      if (container) container.appendChild(rowClone);
+    });
+
     const photoInput = document.getElementById(`installation_photo_${material}`);
     const jpegData = photoInput?.dataset?.jpeg;
     if (jpegData) {
@@ -519,7 +524,6 @@
       clone.appendChild(img);
     }
 
-    // Временный контейнер
     const tempContainer = document.createElement("div");
     tempContainer.style.position = "fixed";
     tempContainer.style.top = "-9999px";
@@ -606,6 +610,7 @@
 
   window.addElementRow = addElementRow;
 </script>
+
 
 
 
