@@ -417,6 +417,7 @@
 
     
 <!-- Подключение EmailJS и html2pdf -->
+<!-- Подключение EmailJS и html2pdf -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script>
@@ -494,25 +495,32 @@
       visibleSection.style.display = "block";
     }
 
+    // Замена input/select/textarea
     clone.querySelectorAll("input, select, textarea").forEach(el => {
       const div = document.createElement("div");
-      div.textContent = el.type === "checkbox" ? (el.checked ? "✔ Да" : "— Нет") : el.value || "—";
+      if (el.type === "checkbox") {
+        div.textContent = el.checked ? "✔ Да" : "— Нет";
+      } else if (el.type === "file") {
+        div.textContent = "";
+      } else {
+        div.textContent = el.value || "—";
+      }
       el.replaceWith(div);
     });
 
-    clone.querySelectorAll("button").forEach(btn => btn.remove());
-
+    // Обработка .element-row отдельно
     document.querySelectorAll(".element-row").forEach(row => {
-      const rowClone = row.cloneNode(true);
-      rowClone.querySelectorAll("input").forEach(el => {
-        const span = document.createElement("div");
-        span.textContent = el.value || "—";
-        el.replaceWith(span);
-      });
-      rowClone.querySelectorAll("button").forEach(btn => btn.remove());
+      const inputs = row.querySelectorAll("input");
       const container = clone.querySelector(`#${row.parentElement.id}`);
-      if (container) container.appendChild(rowClone);
+      if (inputs.length === 2 && container) {
+        const div = document.createElement("div");
+        div.textContent = `${inputs[0].value || "—"} — ${inputs[1].value || "—"}`;
+        div.style.marginBottom = "4px";
+        container.appendChild(div);
+      }
     });
+
+    clone.querySelectorAll("button").forEach(btn => btn.remove());
 
     const photoInput = document.getElementById(`installation_photo_${material}`);
     const jpegData = photoInput?.dataset?.jpeg;
@@ -610,11 +618,6 @@
 
   window.addElementRow = addElementRow;
 </script>
-
-
-
-
-
 
 
 </body>
