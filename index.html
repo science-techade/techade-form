@@ -416,8 +416,6 @@
 <iframe id="pdf-preview" style="width: 100%; height: 500px; margin-top: 20px; display: none;"></iframe>
 
     
-<!-- Подключение актуального EmailJS SDK (v3) -->
-<!-- Подключение актуального EmailJS SDK (v3) -->
 <!-- Подключение EmailJS и html2pdf -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
@@ -487,22 +485,22 @@
     container.style.fontFamily = "Arial, sans-serif";
     container.style.fontSize = "14px";
 
-    const base = document.querySelector("#form > .mb-4");
-    if (base) {
-      container.appendChild(base.cloneNode(true));
-    }
+    const form = document.getElementById("form");
+    const clone = form.cloneNode(true);
 
-    const section = document.getElementById(`section-${material}`);
-    if (section) {
-      const clone = section.cloneNode(true);
-      clone.querySelectorAll("input, select, textarea").forEach(el => {
-        const div = document.createElement("div");
-        div.textContent = el.type === "checkbox" ? (el.checked ? "✔ Да" : "— Нет") : el.value || "—";
-        el.replaceWith(div);
-      });
-      clone.querySelectorAll("button").forEach(btn => btn.remove());
-      container.appendChild(clone);
-    }
+    // Отобразить выбранную секцию
+    clone.querySelectorAll('.analyzer-section').forEach(section => {
+      section.style.display = 'none';
+    });
+    const selectedSection = clone.querySelector(`#section-${material}`);
+    if (selectedSection) selectedSection.style.display = 'block';
+
+    clone.querySelectorAll("input, select, textarea").forEach(el => {
+      const div = document.createElement("div");
+      div.textContent = el.type === "checkbox" ? (el.checked ? "✔ Да" : "— Нет") : el.value || "—";
+      el.replaceWith(div);
+    });
+    clone.querySelectorAll("button").forEach(btn => btn.remove());
 
     const photoInput = document.getElementById(`installation_photo_${material}`);
     const jpegData = photoInput?.dataset?.jpeg;
@@ -511,10 +509,10 @@
       img.src = jpegData;
       img.style.maxWidth = "100%";
       img.style.marginTop = "10px";
-      container.appendChild(img);
+      clone.appendChild(img);
     }
 
-    return container;
+    return clone;
   }
 
   function submitForm() {
@@ -613,6 +611,7 @@
 
   window.addElementRow = addElementRow;
 </script>
+
 
 
 
