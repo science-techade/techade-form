@@ -494,7 +494,6 @@
       visibleSection.style.display = "block";
     }
 
-    // Замена input/select/textarea
     clone.querySelectorAll("input, select, textarea").forEach(el => {
       const div = document.createElement("div");
       if (el.type === "checkbox") {
@@ -507,20 +506,28 @@
       el.replaceWith(div);
     });
 
-    // Обработка динамически добавленных элементов .element-row
-    const originalRows = document.querySelectorAll(".element-row");
-    originalRows.forEach(row => {
-      const containerId = row.parentElement.id;
-      const containerClone = clone.querySelector(`#${containerId}`);
-      if (!containerClone) return;
+    const containers = [
+      "elements-ca-u", "light-elements",
+      "sinter-elements-ca-u",
+      "multiplex-elements-ca-u", "multiplex-light-elements",
+      "courier-elements-ca-u", "courier-light-elements"
+    ];
+    containers.forEach(id => {
+      const original = document.getElementById(id);
+      const cloneContainer = clone.querySelector(`#${id}`);
+      if (!original || !cloneContainer) return;
 
-      const inputs = row.querySelectorAll("input");
-      if (inputs.length === 2) {
-        const div = document.createElement("div");
-        div.textContent = `${inputs[0].value || "—"} — ${inputs[1].value || "—"}`;
-        div.style.marginBottom = "4px";
-        containerClone.appendChild(div);
-      }
+      original.querySelectorAll(".element-row").forEach(row => {
+        const inputs = row.querySelectorAll("input");
+        if (inputs.length >= 2) {
+          const div = document.createElement("div");
+          const element = inputs[0].value || "—";
+          const range = inputs[1].value || "—";
+          div.textContent = `${element} — ${range}`;
+          div.style.marginBottom = "4px";
+          cloneContainer.appendChild(div);
+        }
+      });
     });
 
     clone.querySelectorAll("button").forEach(btn => btn.remove());
@@ -622,9 +629,6 @@
   window.addElementRow = addElementRow;
 </script>
 
-
-  window.addElementRow = addElementRow;
-</script>
 
 
 
