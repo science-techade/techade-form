@@ -480,122 +480,129 @@
     });
   }
 
-  function submitForm() {
-    const form = document.getElementById("form");
-    const pdfPreview = document.getElementById("pdf-preview");
-    const email = form.email.value;
-    const material = form.material.value;
+function submitForm() {
+  const form = document.getElementById("form");
+  const pdfPreview = document.getElementById("pdf-preview");
+  const email = form.email.value;
+  const material = form.material.value;
 
-    if (!email) return alert("Введите email");
+  if (!email) return alert("Введите email");
 
-    const clone = form.cloneNode(true);
-    const visibleSection = clone.querySelector(`#section-${material}`);
-    if (visibleSection) {
-      visibleSection.style.display = "block";
-    }
+  const clone = form.cloneNode(true);
 
-    clone.querySelectorAll("input, select, textarea").forEach(el => {
-      const div = document.createElement("div");
-      if (el.type === "checkbox") {
-        div.textContent = el.checked ? "✔ Да" : "— Нет";
-      } else if (el.type === "file") {
-        div.textContent = "";
-      } else {
-        div.textContent = el.value || "—";
+  // Обработка динамически добавленных элементов
+  const containers = [
+    "elements-ca-u", "light-elements",
+    "sinter-elements-ca-u",
+    "multiplex-elements-ca-u", "multiplex-light-elements",
+    "courier-elements-ca-u", "courier-light-elements"
+  ];
+  containers.forEach(id => {
+    const original = document.getElementById(id);
+    const cloneContainer = clone.querySelector(`#${id}`);
+    if (!original || !cloneContainer) return;
+
+    cloneContainer.innerHTML = "";
+
+    original.querySelectorAll(".element-row").forEach(row => {
+      const inputs = row.querySelectorAll("input");
+      if (inputs.length >= 2) {
+        const div = document.createElement("div");
+        const element = inputs[0].value || "—";
+        const range = inputs[1].value || "—";
+        div.textContent = `${element} — ${range}`;
+        div.style.marginBottom = "4px";
+        cloneContainer.appendChild(div);
       }
-      el.replaceWith(div);
     });
+  });
 
-    const containers = [
-      "elements-ca-u", "light-elements",
-      "sinter-elements-ca-u",
-      "multiplex-elements-ca-u", "multiplex-light-elements",
-      "courier-elements-ca-u", "courier-light-elements"
-    ];
-    containers.forEach(id => {
-      const original = document.getElementById(id);
-      const cloneContainer = clone.querySelector(`#${id}`);
-      if (!original || !cloneContainer) return;
-
-      original.querySelectorAll(".element-row").forEach(row => {
-        const inputs = row.querySelectorAll("input");
-        if (inputs.length >= 2) {
-          const div = document.createElement("div");
-          const element = inputs[0].value || "—";
-          const range = inputs[1].value || "—";
-          div.textContent = `${element} — ${range}`;
-          div.style.marginBottom = "4px";
-          cloneContainer.appendChild(div);
-        }
-      });
-    });
-
-    clone.querySelectorAll("button").forEach(btn => btn.remove());
-
-    const photoInput = document.getElementById(`installation_photo_${material}`);
-    const jpegData = photoInput?.dataset?.jpeg;
-    if (jpegData) {
-      const img = document.createElement("img");
-      img.src = jpegData;
-      img.style.maxWidth = "100%";
-      img.style.marginTop = "10px";
-      clone.appendChild(img);
-    }
-
-    const tempContainer = document.createElement("div");
-    tempContainer.style.position = "fixed";
-    tempContainer.style.top = "-9999px";
-    tempContainer.appendChild(clone);
-    document.body.appendChild(tempContainer);
-
-    html2pdf().set({
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    }).from(clone).output('datauristring')
-      .then(dataUri => {
-        pdfPreview.src = dataUri;
-        pdfPreview.style.display = "block";
-        return html2pdf().set({
-          filename: 'oprosny_list.pdf',
-          html2canvas: { scale: 2, useCORS: true },
-          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        }).from(clone).outputPdf('blob');
-      })
-      .then(blob => {
-        document.body.removeChild(tempContainer);
-        const file = new File([blob], "oprosny_list.pdf", { type: "application/pdf" });
-        const formData = new FormData();
-        formData.append("file", file);
-        return fetch("https://tmpfiles.org/api/v1/upload", {
-          method: "POST",
-          body: formData
-        });
-      })
-      .then(res => res.json())
-      .then(data => {
-        if (!data || !data.data || !data.data.url) throw new Error("Не удалось получить ссылку на PDF");
-        const templateParams = {
-          to: `${email}, science.techade@gmail.com`,
-          email: email,
-          company: form.company.value,
-          date: form.date.value,
-          contact_person: form.contact_person.value,
-          phone: form.phone.value,
-          country: form.country.value,
-          location: form.location.value,
-          material: material,
-          subject: "Новый опросный лист",
-          time: new Date().toLocaleString(),
-          pdf_link: data.data.url
-        };
-        return emailjs.send("service_1rnpxea", "template_sk137ts", templateParams);
-      })
-      .then(() => alert("Форма отправлена. Ссылка на PDF отправлена по email."))
-      .catch(err => {
-        console.error("Ошибка при отправке:", err);
-        alert("Ошибка: " + (err.message || err));
-      });
+  // Отобразить активную секцию
+  const visibleSection = clone.querySelector(`#section-${material}`);
+  if (visibleSection) {
+    visibleSection.style.display = "block";
   }
+
+  // Преобразовать inputs в текст
+  clone.querySelectorAll("input, select, textarea").forEach(el => {
+    const div = document.createElement("div");
+    if (el.type === "checkbox") {
+      div.textContent = el.checked ? "✔ Да" : "— Нет";
+    } else if (el.type === "file") {
+      div.textContent = "";
+    } else {
+      div.textContent = el.value || "—";
+    }
+    el.replaceWith(div);
+  });
+
+  clone.querySelectorAll("button").forEach(btn => btn.remove());
+
+  const photoInput = document.getElementById(`installation_photo_${material}`);
+  const jpegData = photoInput?.dataset?.jpeg;
+  if (jpegData) {
+    const img = document.createElement("img");
+    img.src = jpegData;
+    img.style.maxWidth = "100%";
+    img.style.marginTop = "10px";
+    clone.appendChild(img);
+  }
+
+  const tempContainer = document.createElement("div");
+  tempContainer.style.position = "fixed";
+  tempContainer.style.top = "-9999px";
+  tempContainer.appendChild(clone);
+  document.body.appendChild(tempContainer);
+
+  html2pdf().set({
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+  }).from(clone).output('datauristring')
+    .then(dataUri => {
+      pdfPreview.src = dataUri;
+      pdfPreview.style.display = "block";
+      return html2pdf().set({
+        filename: 'oprosny_list.pdf',
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+      }).from(clone).outputPdf('blob');
+    })
+    .then(blob => {
+      document.body.removeChild(tempContainer);
+      const file = new File([blob], "oprosny_list.pdf", { type: "application/pdf" });
+      const formData = new FormData();
+      formData.append("file", file);
+      return fetch("https://tmpfiles.org/api/v1/upload", {
+        method: "POST",
+        body: formData
+      });
+    })
+    .then(res => res.json())
+    .then(data => {
+      if (!data || !data.data || !data.data.url) throw new Error("Не удалось получить ссылку на PDF");
+      const templateParams = {
+        to: `${email}, science.techade@gmail.com`,
+        email: email,
+        company: form.company.value,
+        date: form.date.value,
+        contact_person: form.contact_person.value,
+        phone: form.phone.value,
+        country: form.country.value,
+        location: form.location.value,
+        material: material,
+        subject: "Новый опросный лист",
+        time: new Date().toLocaleString(),
+        pdf_link: data.data.url
+      };
+      return emailjs.send("service_1rnpxea", "template_sk137ts", templateParams);
+    })
+    .then(() => alert("Форма отправлена. Ссылка на PDF отправлена по email."))
+    .catch(err => {
+      console.error("Ошибка при отправке:", err);
+      alert("Ошибка: " + (err.message || err));
+    });
+}
+
 
   function addElementRow(containerId) {
     const container = document.getElementById(containerId);
