@@ -417,6 +417,7 @@
 
     
 <!-- Подключение EmailJS и html2pdf -->
+<!-- Подключение EmailJS и html2pdf -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script>
@@ -480,28 +481,34 @@
     });
   }
 
-  function generatePrintableContentSimplified(material) {
-    const container = document.createElement("div");
-    container.style.fontFamily = "Arial, sans-serif";
-    container.style.fontSize = "14px";
-
+  function submitForm() {
     const form = document.getElementById("form");
+    const pdfPreview = document.getElementById("pdf-preview");
+    const email = form.email.value;
+    const material = form.material.value;
+
+    if (!email) return alert("Введите email");
+
+    // Клонируем форму
     const clone = form.cloneNode(true);
 
-    // Отобразить выбранную секцию
-    clone.querySelectorAll('.analyzer-section').forEach(section => {
-      section.style.display = 'none';
-    });
-    const selectedSection = clone.querySelector(`#section-${material}`);
-    if (selectedSection) selectedSection.style.display = 'block';
+    // Принудительно показываем выбранную секцию
+    const visibleSection = clone.querySelector(`#section-${material}`);
+    if (visibleSection) {
+      visibleSection.style.display = "block";
+    }
 
+    // Заменяем поля ввода на текст
     clone.querySelectorAll("input, select, textarea").forEach(el => {
       const div = document.createElement("div");
       div.textContent = el.type === "checkbox" ? (el.checked ? "✔ Да" : "— Нет") : el.value || "—";
       el.replaceWith(div);
     });
+
+    // Удаляем кнопки
     clone.querySelectorAll("button").forEach(btn => btn.remove());
 
+    // Добавляем изображение, если есть
     const photoInput = document.getElementById(`installation_photo_${material}`);
     const jpegData = photoInput?.dataset?.jpeg;
     if (jpegData) {
@@ -512,29 +519,17 @@
       clone.appendChild(img);
     }
 
-    return clone;
-  }
-
-  function submitForm() {
-    const form = document.getElementById("form");
-    const pdfPreview = document.getElementById("pdf-preview");
-    const email = form.email.value;
-    const material = form.material.value;
-
-    if (!email) return alert("Введите email");
-
-    const content = generatePrintableContentSimplified(material);
-
+    // Временный контейнер
     const tempContainer = document.createElement("div");
     tempContainer.style.position = "fixed";
     tempContainer.style.top = "-9999px";
-    tempContainer.appendChild(content);
+    tempContainer.appendChild(clone);
     document.body.appendChild(tempContainer);
 
     html2pdf().set({
       html2canvas: { scale: 2, useCORS: true },
       jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    }).from(content).output('datauristring')
+    }).from(clone).output('datauristring')
       .then(dataUri => {
         pdfPreview.src = dataUri;
         pdfPreview.style.display = "block";
@@ -542,7 +537,7 @@
           filename: 'oprosny_list.pdf',
           html2canvas: { scale: 2, useCORS: true },
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-        }).from(content).outputPdf('blob');
+        }).from(clone).outputPdf('blob');
       })
       .then(blob => {
         document.body.removeChild(tempContainer);
@@ -611,6 +606,7 @@
 
   window.addElementRow = addElementRow;
 </script>
+
 
 
 
