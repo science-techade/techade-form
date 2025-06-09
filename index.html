@@ -417,7 +417,6 @@
 
     
 <!-- Подключение EmailJS и html2pdf -->
-<!-- Подключение EmailJS и html2pdf -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script>
@@ -495,18 +494,7 @@
       visibleSection.style.display = "block";
     }
 
-    // Обработка .element-row перед удалением input'ов
-    clone.querySelectorAll(".element-row").forEach(row => {
-      const inputs = row.querySelectorAll("input");
-      const div = document.createElement("div");
-      if (inputs.length === 2) {
-        div.textContent = `${inputs[0].value || "—"} — ${inputs[1].value || "—"}`;
-        div.style.marginBottom = "4px";
-        row.replaceWith(div);
-      }
-    });
-
-    // Замена остальных input/select/textarea
+    // Замена input/select/textarea
     clone.querySelectorAll("input, select, textarea").forEach(el => {
       const div = document.createElement("div");
       if (el.type === "checkbox") {
@@ -517,6 +505,22 @@
         div.textContent = el.value || "—";
       }
       el.replaceWith(div);
+    });
+
+    // Обработка динамически добавленных элементов .element-row
+    const originalRows = document.querySelectorAll(".element-row");
+    originalRows.forEach(row => {
+      const containerId = row.parentElement.id;
+      const containerClone = clone.querySelector(`#${containerId}`);
+      if (!containerClone) return;
+
+      const inputs = row.querySelectorAll("input");
+      if (inputs.length === 2) {
+        const div = document.createElement("div");
+        div.textContent = `${inputs[0].value || "—"} — ${inputs[1].value || "—"}`;
+        div.style.marginBottom = "4px";
+        containerClone.appendChild(div);
+      }
     });
 
     clone.querySelectorAll("button").forEach(btn => btn.remove());
@@ -617,6 +621,7 @@
 
   window.addElementRow = addElementRow;
 </script>
+
 
 
 
