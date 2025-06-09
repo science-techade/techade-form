@@ -617,7 +617,7 @@
   // 👇 Сделать доступной из HTML
   window.addElementRow = addElementRow;
 
- function submitForm() {
+function submitForm() {
   const form = document.getElementById("form");
   const pdfPreview = document.getElementById("pdf-preview");
   const email = form.email.value;
@@ -625,51 +625,21 @@
 
   if (!email) return alert("Введите email");
 
-  // 👇 Показываем нужную секцию (на всякий случай)
   showAnalyzerSection(material);
 
-  // 👇 Клонировать не будем. Просто создадим временный div
-  const clone = form.cloneNode(true);
+  // 👇 создаём только content
+  const content = generatePrintableContentSimplified(material);
 
-  // Удалим кнопки
-  clone.querySelectorAll("button").forEach(btn => btn.remove());
-
-  // Заменим input/select/textarea на текст
-  clone.querySelectorAll("input, select, textarea").forEach(el => {
-    const span = document.createElement("div");
-    span.style.marginBottom = "4px";
-    if (el.type === "checkbox") {
-      span.textContent = el.checked ? "✔ Да" : "— Нет";
-    } else if (el.type === "file") {
-      span.textContent = ""; // изображения отдельно
-    } else {
-      span.textContent = el.value || "—";
-    }
-    el.replaceWith(span);
-  });
-
-  // Добавим изображение
-  const photoInput = document.getElementById(`installation_photo_${material}`);
-  const jpegData = photoInput?.dataset?.jpeg;
-  if (jpegData) {
-    const img = document.createElement("img");
-    img.src = jpegData;
-    img.style.maxWidth = "100%";
-    img.style.marginTop = "10px";
-    clone.appendChild(img);
-  }
-
-  // Добавим клон во временный контейнер в DOM
   const tempContainer = document.createElement("div");
   tempContainer.style.position = "fixed";
   tempContainer.style.top = "-9999px";
-  tempContainer.appendChild(clone);
+  tempContainer.appendChild(content);
   document.body.appendChild(tempContainer);
 
   html2pdf().set({
     html2canvas: { scale: 2, useCORS: true },
     jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-  }).from(clone).output('datauristring')
+  }).from(content).output('datauristring')
     .then(dataUri => {
       pdfPreview.src = dataUri;
       pdfPreview.style.display = "block";
@@ -677,7 +647,7 @@
         filename: 'oprosny_list.pdf',
         html2canvas: { scale: 2, useCORS: true },
         jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      }).from(clone).outputPdf('blob');
+      }).from(content).outputPdf('blob');
     })
     .then(blob => {
       document.body.removeChild(tempContainer);
@@ -714,6 +684,7 @@
       alert("Ошибка: " + (err.message || err));
     });
 }
+
 
   function addElementRow(containerId) {
     const container = document.getElementById(containerId);
