@@ -420,65 +420,86 @@
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script>
-  document.addEventListener("DOMContentLoaded", function () {
-    emailjs.init("lK76KGFPVwTGiY9vX");
+const dynamicElementData = {};
 
-    const materialSelect = document.getElementById("material");
-    if (materialSelect) {
-      materialSelect.addEventListener("change", () => {
-        showAnalyzerSection(materialSelect.value);
+function saveDynamicValues(containerId) {
+  const data = [];
+  document.querySelectorAll(`#${containerId} .element-row`).forEach(row => {
+    const inputs = row.querySelectorAll("input");
+    if (inputs.length >= 2) {
+      data.push({
+        element: inputs[0].value || '',
+        range: inputs[1].value || ''
       });
-      showAnalyzerSection(materialSelect.value);
-    }
-
-    ["pulp", "sinter", "multiplex", "courier"].forEach(bindPhotoPreview);
-
-    const submitBtn = document.getElementById("submit-button");
-    if (submitBtn) {
-      submitBtn.addEventListener("click", submitForm);
     }
   });
+  dynamicElementData[containerId] = data;
+}
 
-  function showAnalyzerSection(value) {
-    document.querySelectorAll('.analyzer-section').forEach(section => {
-      section.style.display = 'none';
+function restoreDynamicValues(containerId) {
+  const container = document.getElementById(containerId);
+  if (!dynamicElementData[containerId]) return;
+
+  container.innerHTML = "";
+  dynamicElementData[containerId].forEach(entry => {
+    const wrapper = document.createElement("div");
+    wrapper.className = "element-row";
+
+    const inputElement = document.createElement("input");
+    inputElement.type = "text";
+    inputElement.placeholder = "Элемент (напр. Fe)";
+    inputElement.name = `${containerId}_element[]`;
+    inputElement.className = "form-control";
+    inputElement.value = entry.element;
+    inputElement.oninput = () => saveDynamicValues(containerId);
+
+    const inputRange = document.createElement("input");
+    inputRange.type = "text";
+    inputRange.placeholder = "Диапазон концентрации";
+    inputRange.name = `${containerId}_range[]`;
+    inputRange.className = "form-control";
+    inputRange.value = entry.range;
+    inputRange.oninput = () => saveDynamicValues(containerId);
+
+    const removeBtn = document.createElement("button");
+    removeBtn.type = "button";
+    removeBtn.className = "btn btn-outline-danger btn-sm";
+    removeBtn.textContent = "Удалить";
+    removeBtn.onclick = () => {
+      wrapper.remove();
+      saveDynamicValues(containerId);
+    };
+
+    wrapper.appendChild(inputElement);
+    wrapper.appendChild(inputRange);
+    wrapper.appendChild(removeBtn);
+    container.appendChild(wrapper);
+  });
+}
+
+// ВСТАВКА: автоматическое определение контейнеров и восстановление значений
+const containers = Array.from(document.querySelectorAll('div[id$="elements-ca-u"], div[id$="light-elements"]')).map(el => el.id);
+
+document.addEventListener("DOMContentLoaded", function () {
+  emailjs.init("lK76KGFPVwTGiY9vX");
+
+  const materialSelect = document.getElementById("material");
+  if (materialSelect) {
+    materialSelect.addEventListener("change", () => {
+      showAnalyzerSection(materialSelect.value);
+      containers.forEach(restoreDynamicValues);
     });
-    const section = document.getElementById(`section-${value}`);
-    if (section) section.style.display = 'block';
+    showAnalyzerSection(materialSelect.value);
+    containers.forEach(restoreDynamicValues);
   }
 
-  function bindPhotoPreview(section) {
-    const input = document.getElementById(`installation_photo_${section}`);
-    const preview = document.getElementById(`installation_preview_${section}`);
-    if (!input || !preview) return;
+  ["pulp", "sinter", "multiplex", "courier"].forEach(bindPhotoPreview);
 
-    input.addEventListener("change", function () {
-      const file = this.files[0];
-      if (!file || !file.type.match(/^image\/(jpe?g|png)$/)) {
-        alert("Загрузите JPG или PNG.");
-        return;
-      }
-
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        const img = new Image();
-        img.crossOrigin = "anonymous";
-        img.onload = function () {
-          const canvas = document.createElement("canvas");
-          canvas.width = img.width;
-          canvas.height = img.height;
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(img, 0, 0);
-          const jpegDataUrl = canvas.toDataURL("image/jpeg", 0.9);
-          input.setAttribute("data-jpeg", jpegDataUrl);
-          preview.src = jpegDataUrl;
-          preview.style.display = "block";
-        };
-        img.src = e.target.result;
-      };
-      reader.readAsDataURL(file);
-    });
+  const submitBtn = document.getElementById("submit-button");
+  if (submitBtn) {
+    submitBtn.addEventListener("click", submitForm);
   }
+});
 
 function submitForm() {
   const form = document.getElementById("form");
@@ -490,29 +511,18 @@ function submitForm() {
 
   const clone = form.cloneNode(true);
 
-  const containers = [
-    "elements-ca-u", "light-elements",
-    "sinter-elements-ca-u",
-    "multiplex-elements-ca-u", "multiplex-light-elements",
-    "courier-elements-ca-u", "courier-light-elements"
-  ];
   containers.forEach(id => {
+    saveDynamicValues(id);
     const original = document.getElementById(id);
     const cloneContainer = clone.querySelector(`#${id}`);
     if (!original || !cloneContainer) return;
 
     cloneContainer.innerHTML = "";
-
-    original.querySelectorAll(".element-row").forEach(row => {
-      const inputs = row.querySelectorAll("input");
-      if (inputs.length >= 2) {
-        const div = document.createElement("div");
-        const element = inputs[0].value || "—";
-        const range = inputs[1].value || "—";
-        div.textContent = `${element} — ${range}`;
-        div.style.marginBottom = "4px";
-        cloneContainer.appendChild(div);
-      }
+    dynamicElementData[id].forEach(entry => {
+      const div = document.createElement("div");
+      div.textContent = `${entry.element || "—"} — ${entry.range || "—"}`;
+      div.style.marginBottom = "4px";
+      cloneContainer.appendChild(div);
     });
   });
 
@@ -606,28 +616,35 @@ function addElementRow(containerId) {
   inputElement.placeholder = "Элемент (напр. Fe)";
   inputElement.name = `${containerId}_element[]`;
   inputElement.className = "form-control";
+  inputElement.oninput = () => saveDynamicValues(containerId);
 
   const inputRange = document.createElement("input");
   inputRange.type = "text";
   inputRange.placeholder = "Диапазон концентрации";
   inputRange.name = `${containerId}_range[]`;
   inputRange.className = "form-control";
+  inputRange.oninput = () => saveDynamicValues(containerId);
 
   const removeBtn = document.createElement("button");
   removeBtn.type = "button";
   removeBtn.className = "btn btn-outline-danger btn-sm";
   removeBtn.textContent = "Удалить";
-  removeBtn.onclick = () => wrapper.remove();
+  removeBtn.onclick = () => {
+    wrapper.remove();
+    saveDynamicValues(containerId);
+  };
 
   wrapper.appendChild(inputElement);
   wrapper.appendChild(inputRange);
   wrapper.appendChild(removeBtn);
   container.appendChild(wrapper);
+
+  saveDynamicValues(containerId);
 }
 
 window.addElementRow = addElementRow;
- 
 </script>
+
 
 
 
