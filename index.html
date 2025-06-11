@@ -559,11 +559,9 @@ function submitForm() {
 
   html2pdf().set(opt).from(clone).outputPdf('blob')
     .then(blob => {
-      // 1. Сохранить PDF локально
       html2pdf().set(opt).from(clone).save();
-
-      // 2. Загрузить на tmpfiles и отправить по email
       document.body.removeChild(tempContainer);
+
       const file = new File([blob], "oprosny_list.pdf", { type: "application/pdf" });
       const formData = new FormData();
       formData.append("file", file);
@@ -597,7 +595,38 @@ function submitForm() {
       alert("Ошибка: " + (err.message || err));
     });
 }
-  window.addElementRow = addElementRow;
+
+function addElementRow(containerId) {
+  const container = document.getElementById(containerId);
+  const wrapper = document.createElement("div");
+  wrapper.className = "element-row";
+
+  const inputElement = document.createElement("input");
+  inputElement.type = "text";
+  inputElement.placeholder = "Элемент (напр. Fe)";
+  inputElement.name = `${containerId}_element[]`;
+  inputElement.className = "form-control";
+
+  const inputRange = document.createElement("input");
+  inputRange.type = "text";
+  inputRange.placeholder = "Диапазон концентрации";
+  inputRange.name = `${containerId}_range[]`;
+  inputRange.className = "form-control";
+
+  const removeBtn = document.createElement("button");
+  removeBtn.type = "button";
+  removeBtn.className = "btn btn-outline-danger btn-sm";
+  removeBtn.textContent = "Удалить";
+  removeBtn.onclick = () => wrapper.remove();
+
+  wrapper.appendChild(inputElement);
+  wrapper.appendChild(inputRange);
+  wrapper.appendChild(removeBtn);
+  container.appendChild(wrapper);
+}
+
+window.addElementRow = addElementRow;
+ 
 </script>
 
 
