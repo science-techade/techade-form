@@ -587,15 +587,15 @@ function submitForm() {
   const excelFormData = new FormData();
   excelFormData.append("file", excelFile);
 
-  fetch("https://tmpfiles.org/api/v1/upload", {
-    method: "POST",
-    body: excelFormData
-  })
-  .then(res => res.json())
-  .then(data => {
-    excelLink = data?.data?.url || "";
-    return generatePDF(excelLink);
-  })
+  fetch("https://transfer.sh/oprosny_list.xlsx", {
+  method: "PUT",
+  body: excelFile
+})
+.then(async res => {
+  if (!res.ok) throw new Error("Ошибка загрузки Excel на transfer.sh");
+  excelLink = await res.text();
+  return generatePDF(excelLink.trim());
+})
   .catch(err => {
     console.error("Ошибка Excel:", err);
     generatePDF("");
@@ -667,37 +667,31 @@ function submitForm() {
           const pdfFile = new File([blob], "oprosny_list.pdf", { type: "application/pdf" });
           const pdfFormData = new FormData();
           pdfFormData.append("file", pdfFile);
-          return fetch("https://tmpfiles.org/api/v1/upload", {
-            method: "POST",
-            body: pdfFormData
-          });
-        })
-        .then(res => res.json())
-        .then(data => {
-          pdfLink = data?.data?.url || "";
-          document.body.removeChild(wrapper);
-          return emailjs.send("service_1rnpxea", "template_sk137ts", {
-            to: `science.techade@gmail.com`,
-            email,
-            company: form.company.value,
-            date: form.date.value,
-            contact_person: form.contact_person.value,
-            phone: form.phone.value,
-            country: form.country.value,
-            location: form.location.value,
-            material,
-            subject: "Опросный лист (PDF + Excel)",
-            time: new Date().toLocaleString(),
-            pdf_link: pdfLink,
-            excel_link: excelLink
-          });
-        })
-        .then(() => alert("Excel и PDF успешно сохранены и отправлены."))
-        .catch(err => {
-          console.error("Ошибка PDF:", err);
-          alert("Ошибка при отправке PDF: " + (err.message || err));
-        });
-    }, 300);
+          return fetch("https://transfer.sh/oprosny_list.pdf", {
+  method: "PUT",
+  body: pdfFile
+})
+.then(async res => {
+  if (!res.ok) throw new Error("Ошибка загрузки PDF на transfer.sh");
+  pdfLink = await res.text();
+  document.body.removeChild(wrapper);
+  return emailjs.send("service_1rnpxea", "template_sk137ts", {
+    to: `science.techade@gmail.com`,
+    email,
+    company: form.company.value,
+    date: form.date.value,
+    contact_person: form.contact_person.value,
+    phone: form.phone.value,
+    country: form.country.value,
+    location: form.location.value,
+    material,
+    subject: "Опросный лист (PDF + Excel)",
+    time: new Date().toLocaleString(),
+    pdf_link: pdfLink.trim(),
+    excel_link: excelLink.trim()
+  });
+})
+
   }
 }
 
