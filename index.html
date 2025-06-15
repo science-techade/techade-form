@@ -584,18 +584,16 @@ function submitForm() {
   const blobExcel = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 
   const excelFile = new File([blobExcel], "oprosny_list.xlsx", { type: blobExcel.type });
-  const excelFormData = new FormData();
-  excelFormData.append("file", excelFile);
 
   fetch("https://transfer.sh/oprosny_list.xlsx", {
-  method: "PUT",
-  body: excelFile
-})
-.then(async res => {
-  if (!res.ok) throw new Error("Ошибка загрузки Excel на transfer.sh");
-  excelLink = await res.text();
-  return generatePDF(excelLink.trim());
-})
+    method: "PUT",
+    body: excelFile
+  })
+  .then(async res => {
+    if (!res.ok) throw new Error("Ошибка загрузки Excel на transfer.sh");
+    excelLink = await res.text();
+    return generatePDF(excelLink.trim());
+  })
   .catch(err => {
     console.error("Ошибка Excel:", err);
     generatePDF("");
@@ -665,35 +663,40 @@ function submitForm() {
       html2pdf().set(opt).from(wrapper).outputPdf('blob')
         .then(blob => {
           const pdfFile = new File([blob], "oprosny_list.pdf", { type: "application/pdf" });
-          const pdfFormData = new FormData();
-          pdfFormData.append("file", pdfFile);
           return fetch("https://transfer.sh/oprosny_list.pdf", {
-  method: "PUT",
-  body: pdfFile
-})
-.then(async res => {
-  if (!res.ok) throw new Error("Ошибка загрузки PDF на transfer.sh");
-  pdfLink = await res.text();
-  document.body.removeChild(wrapper);
-  return emailjs.send("service_1rnpxea", "template_sk137ts", {
-    to: `science.techade@gmail.com`,
-    email,
-    company: form.company.value,
-    date: form.date.value,
-    contact_person: form.contact_person.value,
-    phone: form.phone.value,
-    country: form.country.value,
-    location: form.location.value,
-    material,
-    subject: "Опросный лист (PDF + Excel)",
-    time: new Date().toLocaleString(),
-    pdf_link: pdfLink.trim(),
-    excel_link: excelLink.trim()
-  });
-})
-
+            method: "PUT",
+            body: pdfFile
+          });
+        })
+        .then(async res => {
+          if (!res.ok) throw new Error("Ошибка загрузки PDF на transfer.sh");
+          pdfLink = await res.text();
+          document.body.removeChild(wrapper);
+          return emailjs.send("service_1rnpxea", "template_sk137ts", {
+            to: `science.techade@gmail.com`,
+            email,
+            company: form.company.value,
+            date: form.date.value,
+            contact_person: form.contact_person.value,
+            phone: form.phone.value,
+            country: form.country.value,
+            location: form.location.value,
+            material,
+            subject: "Опросный лист (PDF + Excel)",
+            time: new Date().toLocaleString(),
+            pdf_link: pdfLink.trim(),
+            excel_link: excelLink.trim()
+          });
+        })
+        .then(() => alert("Excel и PDF успешно сохранены и отправлены."))
+        .catch(err => {
+          console.error("Ошибка PDF:", err);
+          alert("Ошибка при отправке PDF: " + (err.message || err));
+        });
+    }, 300);
   }
 }
+
 
 
 function addElementRow(containerId) {
