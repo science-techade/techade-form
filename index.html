@@ -544,6 +544,9 @@ function submitForm() {
   const material = form.material.value;
   if (!email) return alert("Введите email");
 
+  let excelLink = "";
+  let pdfLink = "";
+
   // --- СОХРАНЕНИЕ EXCEL ---
   const dataRows = [];
   const push = (label, val) => dataRows.push([label, val || "—"]);
@@ -580,7 +583,6 @@ function submitForm() {
   const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
   const blobExcel = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
 
-  // Отправка Excel на сервер и на почту
   const excelFile = new File([blobExcel], "oprosny_list.xlsx", { type: blobExcel.type });
   const excelFormData = new FormData();
   excelFormData.append("file", excelFile);
@@ -591,93 +593,111 @@ function submitForm() {
   })
   .then(res => res.json())
   .then(data => {
-    const excelLink = data?.data?.url;
-    if (!excelLink) throw new Error("Не удалось загрузить Excel-файл");
-
-    return emailjs.send("service_1rnpxea", "template_sk137ts", {
-      to: `science.techade@gmail.com`,
-      email,
-      company: form.company.value,
-      date: form.date.value,
-      contact_person: form.contact_person.value,
-      phone: form.phone.value,
-      country: form.country.value,
-      location: form.location.value,
-      material,
-      subject: "Опросный лист (Excel)",
-      time: new Date().toLocaleString(),
-      pdf_link: excelLink
-    });
+    excelLink = data?.data?.url || "";
+    return generatePDF(excelLink);
   })
-  .then(() => console.log("Excel отправлен"))
-  .catch(err => console.error("Ошибка Excel:", err));
-
-  // --- СОХРАНЕНИЕ PDF ---
-  const originalContent = document.getElementById("pdf-content");
-  const clone = originalContent.cloneNode(true);
-
-  clone.querySelectorAll(".analyzer-section").forEach(section => {
-    section.style.display = "none";
+  .catch(err => {
+    console.error("Ошибка Excel:", err);
+    generatePDF("");
   });
-  const selected = clone.querySelector(`#section-${material}`);
-  if (selected) selected.style.display = "block";
 
-  containers.forEach(id => {
-    const originalBlock = document.getElementById(id);
-    const cloneBlock = clone.querySelector(`#${id}`);
-    if (!originalBlock || !cloneBlock) return;
-    cloneBlock.innerHTML = "";
-    dynamicElementData[id].forEach(entry => {
+  function generatePDF(excelLink) {
+    const originalContent = document.getElementById("pdf-content");
+    const clone = originalContent.cloneNode(true);
+
+    clone.querySelectorAll(".analyzer-section").forEach(section => {
+      section.style.display = "none";
+    });
+    const selected = clone.querySelector(`#section-${material}`);
+    if (selected) selected.style.display = "block";
+
+    containers.forEach(id => {
+      const originalBlock = document.getElementById(id);
+      const cloneBlock = clone.querySelector(`#${id}`);
+      if (!originalBlock || !cloneBlock) return;
+      cloneBlock.innerHTML = "";
+      dynamicElementData[id].forEach(entry => {
+        const div = document.createElement("div");
+        div.textContent = `${entry.element || "—"} — ${entry.range || "—"}`;
+        div.style.marginBottom = "4px";
+        cloneBlock.appendChild(div);
+      });
+    });
+
+    clone.querySelectorAll("input, select, textarea").forEach(el => {
       const div = document.createElement("div");
-      div.textContent = `${entry.element || "—"} — ${entry.range || "—"}`;
+      div.style.padding = "4px 8px";
+      div.style.border = "1px solid #ccc";
+      div.style.borderRadius = "3px";
+      div.style.minHeight = "20px";
       div.style.marginBottom = "4px";
-      cloneBlock.appendChild(div);
+      div.style.backgroundColor = "#f9f9f9";
+      div.style.fontSize = "13px";
+      div.textContent = el.type === "checkbox" ? (el.checked ? "✔ Да" : "— Нет") : (el.value?.trim() || "—");
+      el.replaceWith(div);
     });
-  });
 
-  clone.querySelectorAll("input, select, textarea").forEach(el => {
-    const div = document.createElement("div");
-    div.style.padding = "4px 8px";
-    div.style.border = "1px solid #ccc";
-    div.style.borderRadius = "3px";
-    div.style.minHeight = "20px";
-    div.style.marginBottom = "4px";
-    div.style.backgroundColor = "#f9f9f9";
-    div.style.fontSize = "13px";
-    div.textContent = el.type === "checkbox" ? (el.checked ? "✔ Да" : "— Нет") : (el.value?.trim() || "—");
-    el.replaceWith(div);
-  });
+    clone.querySelectorAll("button").forEach(btn => btn.remove());
 
-  clone.querySelectorAll("button").forEach(btn => btn.remove());
+    const photoInput = document.getElementById(`installation_photo_${material}`);
+    const jpegData = photoInput?.dataset?.jpeg;
+    if (jpegData) {
+      const img = document.createElement("img");
+      img.src = jpegData;
+      img.style.maxWidth = "100%";
+      img.style.marginTop = "10px";
+      clone.appendChild(img);
+    }
 
-  const photoInput = document.getElementById(`installation_photo_${material}`);
-  const jpegData = photoInput?.dataset?.jpeg;
-  if (jpegData) {
-    const img = document.createElement("img");
-    img.src = jpegData;
-    img.style.maxWidth = "100%";
-    img.style.marginTop = "10px";
-    clone.appendChild(img);
+    const wrapper = document.createElement("div");
+    wrapper.style.cssText = "position: fixed; top: 0; left: 0; z-index: 9999; width: 210mm; padding: 20px; background: white; opacity: 1;";
+    wrapper.appendChild(clone);
+    document.body.appendChild(wrapper);
+
+    const opt = {
+      filename: 'oprosny_list.pdf',
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+    };
+
+    setTimeout(() => {
+      html2pdf().set(opt).from(wrapper).outputPdf('blob')
+        .then(blob => {
+          const pdfFile = new File([blob], "oprosny_list.pdf", { type: "application/pdf" });
+          const pdfFormData = new FormData();
+          pdfFormData.append("file", pdfFile);
+          return fetch("https://tmpfiles.org/api/v1/upload", {
+            method: "POST",
+            body: pdfFormData
+          });
+        })
+        .then(res => res.json())
+        .then(data => {
+          pdfLink = data?.data?.url || "";
+          document.body.removeChild(wrapper);
+          return emailjs.send("service_1rnpxea", "template_sk137ts", {
+            to: `science.techade@gmail.com`,
+            email,
+            company: form.company.value,
+            date: form.date.value,
+            contact_person: form.contact_person.value,
+            phone: form.phone.value,
+            country: form.country.value,
+            location: form.location.value,
+            material,
+            subject: "Опросный лист (PDF + Excel)",
+            time: new Date().toLocaleString(),
+            message: `Ссылки на файлы:\nPDF: ${pdfLink}\nExcel: ${excelLink}`
+          });
+        })
+        .then(() => alert("Excel и PDF успешно сохранены и отправлены."))
+        .catch(err => {
+          console.error("Ошибка PDF:", err);
+          alert("Ошибка при отправке PDF: " + (err.message || err));
+        });
+    }, 300);
   }
-
-  const wrapper = document.createElement("div");
-  wrapper.style.cssText = "position: fixed; top: 0; left: 0; z-index: 9999; width: 210mm; padding: 20px; background: white; opacity: 1;";
-  wrapper.appendChild(clone);
-  document.body.appendChild(wrapper);
-
-  const opt = {
-    filename: 'oprosny_list.pdf',
-    html2canvas: { scale: 2, useCORS: true },
-    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-  };
-
-  setTimeout(() => {
-    html2pdf().set(opt).from(wrapper).save().then(() => {
-      document.body.removeChild(wrapper);
-      alert("Excel и PDF успешно сохранены и отправлены.");
-    });
-  }, 300);
 }
 
 
