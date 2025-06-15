@@ -688,7 +688,9 @@ function submitForm() {
             material,
             subject: "Опросный лист (PDF + Excel)",
             time: new Date().toLocaleString(),
-            message: `Ссылки на файлы:\nPDF: ${pdfLink}\nExcel: ${excelLink}`
+            pdf_link: pdfLink,
+excel_link: excelLink
+`
           });
         })
         .then(() => alert("Excel и PDF успешно сохранены и отправлены."))
