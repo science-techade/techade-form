@@ -544,14 +544,17 @@ function submitForm() {
   if (!email) return alert("Введите email");
 
   // Клонируем форму
-  const clone = form.cloneNode(true);
-  clone.innerHTML = clone.innerHTML.trim();
+  const clone = document.createElement("div");
+  const content = form.querySelector("#pdf-content").cloneNode(true);
+  clone.appendChild(content);
+
+  // Стили контейнера
   clone.style.margin = "0";
   clone.style.padding = "0";
   clone.style.width = "100%";
   clone.style.boxSizing = "border-box";
 
-  // Заменяем все поля input/select на текст
+  // Обработка input/select/textarea
   clone.querySelectorAll("input, select, textarea").forEach(el => {
     const div = document.createElement("div");
     div.style.padding = "4px 8px";
@@ -573,7 +576,7 @@ function submitForm() {
     el.replaceWith(div);
   });
 
-  // Обновляем динамические элементы
+  // Обновляем динамические значения
   containers.forEach(id => {
     saveDynamicValues(id);
     const original = document.getElementById(id);
@@ -589,7 +592,7 @@ function submitForm() {
     });
   });
 
-  // Показываем только активную секцию
+  // Показать только выбранную секцию
   const allSections = clone.querySelectorAll(".analyzer-section");
   allSections.forEach(section => {
     section.style.display = "none";
@@ -598,13 +601,12 @@ function submitForm() {
   const visibleSection = clone.querySelector(`#section-${material}`);
   if (visibleSection) {
     visibleSection.style.display = "block";
-    visibleSection.classList.remove("analyzer-section");
   }
 
-  // Удаляем кнопки
+  // Удаляем все кнопки
   clone.querySelectorAll("button").forEach(btn => btn.remove());
 
-  // Вставляем превью изображения, если есть
+  // Вставка изображения
   const photoInput = document.getElementById(`installation_photo_${material}`);
   const jpegData = photoInput?.dataset?.jpeg;
   if (jpegData) {
@@ -615,15 +617,15 @@ function submitForm() {
     clone.appendChild(img);
   }
 
-  // Вставляем во временный контейнер
-  const tempContainer = document.createElement("div");
-  tempContainer.style.position = "absolute";
-  tempContainer.style.left = "-9999px";
-  tempContainer.style.top = "0";
-  tempContainer.appendChild(clone);
-  document.body.appendChild(tempContainer);
+  // Вставляем во временную обёртку
+  const wrapper = document.createElement("div");
+  wrapper.style.position = "absolute";
+  wrapper.style.left = "-9999px";
+  wrapper.style.top = "0";
+  wrapper.appendChild(clone);
+  document.body.appendChild(wrapper);
 
-  // Опции PDF
+  // Генерация PDF
   const opt = {
     filename: 'oprosny_list.pdf',
     html2canvas: { scale: 2, useCORS: true },
@@ -631,11 +633,10 @@ function submitForm() {
     pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
   };
 
-  // Генерация PDF и отправка
   html2pdf().set(opt).from(clone).outputPdf('blob')
     .then(blob => {
       html2pdf().set(opt).from(clone).save();
-      document.body.removeChild(tempContainer);
+      document.body.removeChild(wrapper);
 
       const file = new File([blob], "oprosny_list.pdf", { type: "application/pdf" });
       const formData = new FormData();
@@ -647,24 +648,21 @@ function submitForm() {
     })
     .then(res => res.json())
     .then(data => {
-      if (!data || !data.data || !data.data.url) throw new Error("Не удалось получить ссылку на PDF");
-
-      const templateParams = {
+      if (!data?.data?.url) throw new Error("Не удалось получить ссылку на PDF");
+      return emailjs.send("service_1rnpxea", "template_sk137ts", {
         to: `${email}, science.techade@gmail.com`,
-        email: email,
+        email,
         company: form.company.value,
         date: form.date.value,
         contact_person: form.contact_person.value,
         phone: form.phone.value,
         country: form.country.value,
         location: form.location.value,
-        material: material,
+        material,
         subject: "Новый опросный лист",
         time: new Date().toLocaleString(),
         pdf_link: data.data.url
-      };
-
-      return emailjs.send("service_1rnpxea", "template_sk137ts", templateParams);
+      });
     })
     .then(() => alert("PDF сохранён и отправлен по email."))
     .catch(err => {
