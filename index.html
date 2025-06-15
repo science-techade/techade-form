@@ -418,7 +418,7 @@
     
 <!-- Подключение EmailJS и html2pdf -->
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
 <script>
 const dynamicElementData = {};
 
@@ -598,7 +598,8 @@ function submitForm() {
 
   // Создаем обертку без создания пустой страницы
   const hiddenWrapper = document.createElement("div");
-  hiddenWrapper.style.cssText = "position: absolute; top: 0; left: 0; width: 210mm; background: #fff; padding: 10px; visibility: hidden; z-index: -1; overflow: hidden";
+  hiddenWrapper.style.cssText = "position: absolute; top: 0; left: 0; width: 210mm; background: #fff; padding: 10px; opacity: 0;";
+  hiddenWrapper.style.minHeight = "297mm";
   hiddenWrapper.appendChild(clone);
   document.body.appendChild(hiddenWrapper);
 
