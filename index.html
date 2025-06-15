@@ -685,124 +685,112 @@
         }
     }
 
-    async function generatePDF(excelLink) {
-        const originalContent = document.getElementById("pdf-content");
-        const clone = originalContent.cloneNode(true);
+    // Новая вспомогательная функция, которая только генерирует PDF и возвращает его как Blob
+async function generatePDFBlob() { // Изменено название функции
+    const originalContent = document.getElementById("pdf-content");
+    const clone = originalContent.cloneNode(true);
 
-        // Убедимся, что отображается только нужная секция
-        clone.querySelectorAll(".analyzer-section").forEach(section => {
-            section.style.display = "none";
-        });
-        const material = document.getElementById("material").value;
-        const selected = clone.querySelector(`#section-${material}`);
-        if (selected) selected.style.display = "block";
+    // Убедимся, что отображается только нужная секция
+    clone.querySelectorAll(".analyzer-section").forEach(section => {
+        section.style.display = "none";
+    });
+    const material = document.getElementById("material").value;
+    const selected = clone.querySelector(`#section-${material}`);
+    if (selected) selected.style.display = "block";
 
-        // Заменяем поля ввода на простой текст для PDF
-        clone.querySelectorAll("input, select, textarea").forEach(el => {
-            // Пропускаем hidden input и file input
-            if (el.type === "hidden" || el.type === "file") return;
-            // Пропускаем кнопки (их нет в clone, но для безопасности)
-            if (el.tagName === 'BUTTON') return;
+    // Заменяем поля ввода на простой текст для PDF
+    clone.querySelectorAll("input, select, textarea").forEach(el => {
+        // Пропускаем hidden input и file input
+        if (el.type === "hidden" || el.type === "file") return;
+        // Пропускаем кнопки (их нет в clone, но для безопасности)
+        if (el.tagName === 'BUTTON') return;
 
-            const div = document.createElement("div");
-            div.style.padding = "4px 8px";
-            div.style.border = "1px solid #ccc";
-            div.style.borderRadius = "3px";
-            div.style.minHeight = "20px";
-            div.style.marginBottom = "4px";
-            div.style.backgroundColor = "#f9f9f9";
-            div.style.fontSize = "13px";
+        const div = document.createElement("div");
+        div.style.padding = "4px 8px";
+        div.style.border = "1px solid #ccc";
+        div.style.borderRadius = "3px";
+        div.style.minHeight = "20px";
+        div.style.marginBottom = "4px";
+        div.style.backgroundColor = "#f9f9f9";
+        div.style.fontSize = "13px";
 
-            if (el.type === "checkbox") {
-                div.textContent = el.checked ? "Да" : "Нет";
-                // Добавляем атрибут для стилей при печати, если нужен
-                el.closest(".form-check").querySelector("label").setAttribute("data-checked", el.checked ? "✔" : "✖");
-            } else if (el.tagName === "SELECT") {
-                div.textContent = el.options[el.selectedIndex]?.text || "—";
-            }
-            else {
-                div.textContent = el.value?.trim() || "—";
-            }
-            el.replaceWith(div);
-        });
-
-        // Встраиваем динамические элементы в клон для PDF
-        const allDynamicContainers = Array.from(document.querySelectorAll('div[id$="elements-ca-u"], div[id$="light-elements"], div[id$="sinter-elements-ca-u"], div[id$="multiplex-elements-ca-u"], div[id$="multiplex-light-elements"], div[id$="courier-elements-ca-u"], div[id$="courier-light-elements"]')).map(el => el.id);
-
-        allDynamicContainers.forEach(id => {
-            const originalBlock = document.getElementById(id); // Оригинальный блок
-            const cloneBlock = clone.querySelector(`#${id}`); // Клонированный блок
-            if (!originalBlock || !cloneBlock) return;
-
-            cloneBlock.innerHTML = ""; // Очищаем клонированный блок
-            // Используем сохраненные dynamicElementData
-            const dynamicElements = dynamicElementData[id];
-            if (dynamicElements) {
-                dynamicElements.forEach(entry => {
-                    const div = document.createElement("div");
-                    div.textContent = `${entry.element || "—"} — ${entry.range || "—"}`;
-                    div.style.marginBottom = "4px";
-                    cloneBlock.appendChild(div);
-                });
-            }
-        });
-
-        // Встраивание изображения в PDF
-        const photoInputId = `installation_photo_${material}`;
-        const photoInput = document.getElementById(photoInputId);
-        const jpegData = photoInput?.dataset?.jpeg; // Получаем Data URL из dataset
-        if (jpegData) {
-            const img = document.createElement("img");
-            img.src = jpegData;
-            img.style.maxWidth = "100%";
-            img.style.marginTop = "10px";
-            img.style.pageBreakInside = 'avoid'; // Попытка избежать разрыва изображения
-            // Добавляем изображение в конец активной секции или в основное содержимое
-            if (selected) {
-                selected.appendChild(img);
-            } else {
-                clone.appendChild(img);
-            }
+        if (el.type === "checkbox") {
+            div.textContent = el.checked ? "Да" : "Нет";
+            // Добавляем атрибут для стилей при печати, если нужен
+            el.closest(".form-check").querySelector("label").setAttribute("data-checked", el.checked ? "✔" : "✖");
+        } else if (el.tagName === "SELECT") {
+            div.textContent = el.options[el.selectedIndex]?.text || "—";
         }
-
-        // Создаем временный элемент-обертку для html2pdf
-        const wrapper = document.createElement("div");
-        wrapper.style.cssText = "position: absolute; top: -9999px; left: -9999px; width: 210mm; padding: 20px; background: white; opacity: 0; z-index: -1;"; // Скрываем и убираем из видимой области
-        wrapper.appendChild(clone);
-        document.body.appendChild(wrapper);
-
-        const opt = {
-            filename: 'oprosny_list.pdf',
-            html2canvas: { scale: 2, useCORS: true },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-        };
-
-        let pdfBlob;
-        try {
-            // Ждем завершения генерации PDF
-            pdfBlob = await html2pdf().set(opt).from(wrapper).outputPdf('blob');
-        } finally {
-            // Удаляем временный элемент после генерации PDF
-            if (document.body.contains(wrapper)) {
-                document.body.removeChild(wrapper);
-            }
+        else {
+            div.textContent = el.value?.trim() || "—";
         }
+        el.replaceWith(div);
+    });
 
-        // Загрузка PDF файла на transfer.sh
-        const pdfFile = new File([pdfBlob], "oprosny_list.pdf", { type: "application/pdf" });
-        const pdfRes = await fetch("https://transfer.sh/oprosny_list.pdf", {
-            method: "PUT",
-            body: pdfFile
-        });
+    // Встраиваем динамические элементы в клон для PDF (скопировать из предыдущего полного кода)
+    const allDynamicContainers = Array.from(document.querySelectorAll('div[id$="elements-ca-u"], div[id$="light-elements"], div[id$="sinter-elements-ca-u"], div[id$="multiplex-elements-ca-u"], div[id$="multiplex-light-elements"], div[id$="courier-elements-ca-u"], div[id$="courier-light-elements"]')).map(el => el.id);
 
-        if (!pdfRes.ok) {
-            const errorText = await pdfRes.text();
-            throw new Error(`Ошибка загрузки PDF на transfer.sh: ${pdfRes.status} ${pdfRes.statusText} - ${errorText}`);
+    allDynamicContainers.forEach(id => {
+        const originalBlock = document.getElementById(id);
+        const cloneBlock = clone.querySelector(`#${id}`);
+        if (!originalBlock || !cloneBlock) return;
+
+        cloneBlock.innerHTML = "";
+        const dynamicElements = dynamicElementData[id];
+        if (dynamicElements) {
+            dynamicElements.forEach(entry => {
+                const div = document.createElement("div");
+                div.textContent = `${entry.element || "—"} — ${entry.range || "—"}`;
+                div.style.marginBottom = "4px";
+                cloneBlock.appendChild(div);
+            });
         }
+    });
 
-        return (await pdfRes.text()).trim(); // Возвращаем ссылку на PDF
+    // Встраивание изображения в PDF (скопировать из предыдущего полного кода)
+    const photoInputId = `installation_photo_${material}`;
+    const photoInput = document.getElementById(photoInputId);
+    const jpegData = photoInput?.dataset?.jpeg;
+    if (jpegData) {
+        const img = document.createElement("img");
+        img.src = jpegData;
+        img.style.maxWidth = "100%";
+        img.style.marginTop = "10px";
+        img.style.pageBreakInside = 'avoid';
+        if (selected) {
+            selected.appendChild(img);
+        } else {
+            clone.appendChild(img);
+        }
     }
+
+
+    // Создаем временный элемент-обертку для html2pdf
+    const wrapper = document.createElement("div");
+    wrapper.style.cssText = "position: absolute; top: -9999px; left: -9999px; width: 210mm; padding: 20px; background: white; opacity: 0; z-index: -1;";
+    wrapper.appendChild(clone);
+    document.body.appendChild(wrapper);
+
+    const opt = {
+        filename: 'oprosny_list.pdf',
+        html2canvas: { scale: 2, useCORS: true },
+        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+    };
+
+    let pdfBlob;
+    try {
+        pdfBlob = await html2pdf().set(opt).from(wrapper).outputPdf('blob');
+    } finally {
+        if (document.body.contains(wrapper)) {
+            document.body.removeChild(wrapper);
+        }
+    }
+
+    // Здесь больше НЕТ загрузки на transfer.sh
+    // Вместо этого функция просто ВОЗВРАЩАЕТ pdfBlob
+    return pdfBlob;
+}
 
 
     function addElementRow(containerId) {
