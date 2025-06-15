@@ -559,6 +559,169 @@
         }
     });
 
+    // --- НОВАЯ ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ДЛЯ КОНВЕРТАЦИИ BLOB В BASE64 ---
+    async function blobToBase64(blob) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                // FileReader.result будет "data:image/jpeg;base64,..."
+                // Нам нужна только часть после запятой
+                const base64String = reader.result.split(',')[1];
+                resolve(base64String);
+            };
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+        });
+    }
+
+    // --- НОВАЯ ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ТОЛЬКО ГЕНЕРИРУЕТ EXCEL BLOB ---
+    function generateExcelBlob() {
+        const form = document.getElementById("form");
+        const material = form.material.value;
+        const dataRows = [];
+        const push = (label, val) => dataRows.push([label, val || "—"]);
+
+        push("Дата", form.date.value);
+        push("Компания", form.company.value);
+        push("Контактное лицо", form.contact_person.value);
+        push("Телефон", form.phone.value);
+        push("Email", form.email.value);
+        push("Страна", form.country.value);
+        push("Местонахождение", form.location.value);
+        push("Тип материала", material);
+
+        const section = document.getElementById(`section-${material}`);
+        if (section) {
+            section.querySelectorAll("input, select, textarea").forEach(input => {
+                if (input.type === "file" || input.tagName === 'BUTTON') return;
+
+                const labelElement = input.closest(".mb-3")?.querySelector("label") || input.closest(".form-check")?.querySelector("label");
+                const label = labelElement ? labelElement.textContent?.trim() : input.name;
+                const value = input.type === "checkbox" ? (input.checked ? "Да" : "Нет") : input.value;
+                push(label, value);
+            });
+        }
+
+        const allDynamicContainers = Array.from(document.querySelectorAll('div[id$="elements-ca-u"], div[id$="light-elements"], div[id$="sinter-elements-ca-u"], div[id$="multiplex-elements-ca-u"], div[id$="multiplex-light-elements"], div[id$="courier-elements-ca-u"], div[id$="courier-light-elements"]')).map(el => el.id);
+
+        allDynamicContainers.forEach(id => {
+            saveDynamicValues(id);
+            const dynamicElements = dynamicElementData[id];
+            if (dynamicElements && dynamicElements.length > 0) {
+                push(`--- Элементы из ${id} ---`, "");
+                dynamicElements.forEach(entry => {
+                    push(`Элемент: ${entry.element || '—'}`, `Диапазон: ${entry.range || '—'}`);
+                });
+            }
+        });
+
+        const worksheet = XLSX.utils.aoa_to_sheet(dataRows);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Опросный лист");
+        const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+        return new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    }
+
+    // --- ИЗМЕНЕННАЯ ФУНКЦИЯ generatePDFBlob: ТОЛЬКО ГЕНЕРИРУЕТ PDF BLOB ---
+    async function generatePDFBlob() { // Изменено название функции
+        const originalContent = document.getElementById("pdf-content");
+        const clone = originalContent.cloneNode(true);
+
+        // Убедимся, что отображается только нужная секция
+        clone.querySelectorAll(".analyzer-section").forEach(section => {
+            section.style.display = "none";
+        });
+        const material = document.getElementById("material").value;
+        const selected = clone.querySelector(`#section-${material}`);
+        if (selected) selected.style.display = "block";
+
+        // Заменяем поля ввода на простой текст для PDF
+        clone.querySelectorAll("input, select, textarea").forEach(el => {
+            if (el.type === "hidden" || el.type === "file" || el.tagName === 'BUTTON') return;
+
+            const div = document.createElement("div");
+            div.style.padding = "4px 8px";
+            div.style.border = "1px solid #ccc";
+            div.style.borderRadius = "3px";
+            div.style.minHeight = "20px";
+            div.style.marginBottom = "4px";
+            div.style.backgroundColor = "#f9f9f9";
+            div.style.fontSize = "13px";
+
+            if (el.type === "checkbox") {
+                div.textContent = el.checked ? "Да" : "Нет";
+                el.closest(".form-check").querySelector("label").setAttribute("data-checked", el.checked ? "✔" : "✖");
+            } else if (el.tagName === "SELECT") {
+                div.textContent = el.options[el.selectedIndex]?.text || "—";
+            }
+            else {
+                div.textContent = el.value?.trim() || "—";
+            }
+            el.replaceWith(div);
+        });
+
+        // Встраиваем динамические элементы в клон для PDF
+        const allDynamicContainers = Array.from(document.querySelectorAll('div[id$="elements-ca-u"], div[id$="light-elements"], div[id$="sinter-elements-ca-u"], div[id$="multiplex-elements-ca-u"], div[id$="multiplex-light-elements"], div[id$="courier-elements-ca-u"], div[id$="courier-light-elements"]')).map(el => el.id);
+
+        allDynamicContainers.forEach(id => {
+            const originalBlock = document.getElementById(id);
+            const cloneBlock = clone.querySelector(`#${id}`);
+            if (!originalBlock || !cloneBlock) return;
+
+            cloneBlock.innerHTML = "";
+            const dynamicElements = dynamicElementData[id];
+            if (dynamicElements) {
+                dynamicElements.forEach(entry => {
+                    const div = document.createElement("div");
+                    div.textContent = `${entry.element || "—"} — ${entry.range || "—"}`;
+                    div.style.marginBottom = "4px";
+                    cloneBlock.appendChild(div);
+                });
+            }
+        });
+
+        // Встраивание изображения в PDF
+        const photoInputId = `installation_photo_${material}`;
+        const photoInput = document.getElementById(photoInputId);
+        const jpegData = photoInput?.dataset?.jpeg;
+        if (jpegData) {
+            const img = document.createElement("img");
+            img.src = jpegData;
+            img.style.maxWidth = "100%";
+            img.style.marginTop = "10px";
+            img.style.pageBreakInside = 'avoid';
+            if (selected) {
+                selected.appendChild(img);
+            } else {
+                clone.appendChild(img);
+            }
+        }
+
+        // Создаем временный элемент-обертку для html2pdf
+        const wrapper = document.createElement("div");
+        wrapper.style.cssText = "position: absolute; top: -9999px; left: -9999px; width: 210mm; padding: 20px; background: white; opacity: 0; z-index: -1;";
+        wrapper.appendChild(clone);
+        document.body.appendChild(wrapper);
+
+        const opt = {
+            filename: 'oprosny_list.pdf',
+            html2canvas: { scale: 2, useCORS: true },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        };
+
+        let pdfBlob;
+        try {
+            pdfBlob = await html2pdf().set(opt).from(wrapper).outputPdf('blob');
+        } finally {
+            if (document.body.contains(wrapper)) {
+                document.body.removeChild(wrapper);
+            }
+        }
+        return pdfBlob; // Функция теперь ВОЗВРАЩАЕТ Blob
+    }
+
+    // --- ГЛАВНАЯ ФУНКЦИЯ submitForm С ИЗМЕНЕНИЯМИ ---
     async function submitForm() {
         const form = document.getElementById("form");
         const emailInput = form.email;
@@ -588,78 +751,22 @@
         const email = emailInput.value;
         const material = materialSelect.value;
 
-        let excelLink = "";
-        let pdfLink = "";
-
-        // --- СОХРАНЕНИЕ EXCEL ---
-        const dataRows = [];
-        const push = (label, val) => dataRows.push([label, val || "—"]);
-
-        push("Дата", form.date.value);
-        push("Компания", form.company.value);
-        push("Контактное лицо", form.contact_person.value);
-        push("Телефон", form.phone.value);
-        push("Email", form.email.value);
-        push("Страна", form.country.value);
-        push("Местонахождение", form.location.value);
-        push("Тип материала", form.material.value); // Изменено на "Тип материала"
-
-        const section = document.getElementById(`section-${material}`);
-        if (section) {
-            // Собираем данные из выбранной секции
-            section.querySelectorAll("input, select, textarea").forEach(input => {
-                if (input.type === "file") return; // Пропускаем file input, его обрабатываем отдельно
-                // Исключаем кнопки
-                if (input.tagName === 'BUTTON') return;
-
-                const labelElement = input.closest(".mb-3")?.querySelector("label") || input.closest(".form-check")?.querySelector("label");
-                const label = labelElement ? labelElement.textContent?.trim() : input.name; // Более надежный поиск лейбла
-                const value = input.type === "checkbox" ? (input.checked ? "Да" : "Нет") : input.value;
-                push(label, value);
-            });
-        }
-
-        // Собираем динамические элементы
-        // Обратите внимание, что containers определен глобально.
-        // Нужно обновить его, если новые контейнеры появятся.
-        const allDynamicContainers = Array.from(document.querySelectorAll('div[id$="elements-ca-u"], div[id$="light-elements"], div[id$="sinter-elements-ca-u"], div[id$="multiplex-elements-ca-u"], div[id$="multiplex-light-elements"], div[id$="courier-elements-ca-u"], div[id$="courier-light-elements"]')).map(el => el.id);
-
-        allDynamicContainers.forEach(id => {
-            saveDynamicValues(id); // Убедимся, что текущие значения сохранены
-            const dynamicElements = dynamicElementData[id];
-            if (dynamicElements && dynamicElements.length > 0) {
-                push(`--- Элементы из ${id} ---`, ""); // Разделитель
-                dynamicElements.forEach(entry => {
-                    push(`Элемент: ${entry.element || '—'}`, `Диапазон: ${entry.range || '—'}`);
-                });
-            }
-        });
-
-        const worksheet = XLSX.utils.aoa_to_sheet(dataRows);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Опросный лист");
-        const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-        const blobExcel = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-
-        const excelFile = new File([blobExcel], "oprosny_list.xlsx", { type: blobExcel.type });
+        // Вместо создания ссылок, будем получать BLOB'ы
+        let pdfBlob;
+        let excelBlob;
 
         try {
-            // Загрузка Excel файла
-            const excelRes = await fetch("https://transfer.sh/oprosny_list.xlsx", {
-                method: "PUT",
-                body: excelFile
-            });
-            if (!excelRes.ok) {
-                const errorText = await excelRes.text();
-                throw new Error(`Ошибка загрузки Excel на transfer.sh: ${excelRes.status} ${excelRes.statusText} - ${errorText}`);
-            }
-            excelLink = await excelRes.text();
-            excelLink = excelLink.trim(); // Удаляем лишние пробелы/переносы строк
+            // Генерируем Excel Blob
+            excelBlob = generateExcelBlob();
 
-            // Генерация и загрузка PDF
-            pdfLink = await generatePDF(excelLink);
+            // Генерируем PDF Blob
+            pdfBlob = await generatePDFBlob();
 
-            // Отправка письма через EmailJS
+            // --- КОНВЕРТИРУЕМ BLOB'Ы В BASE64 ---
+            const pdfBase64 = await blobToBase64(pdfBlob);
+            const excelBase64 = await blobToBase64(excelBlob);
+
+            // Отправка письма через EmailJS с ВЛОЖЕНИЯМИ
             await emailjs.send("service_1rnpxea", "template_sk137ts", {
                 to: `science.techade@gmail.com`, // Email получателя
                 email: email, // Email отправителя (из формы)
@@ -672,126 +779,32 @@
                 material: material,
                 subject: `Новый опросный лист от ${form.company.value} (${form.date.value})`, // Более информативная тема
                 time: new Date().toLocaleString(),
-                pdf_link: pdfLink,
-                excel_link: excelLink
+                // Убираем pdf_link и excel_link из параметров шаблона
+                // Они больше не нужны, так как отправляем вложениями
+            }, {
+                // Добавляем вложения через опции EmailJS
+                attachments: [
+                    {
+                        name: "Опросный лист.pdf", // Имя файла, которое будет видно получателю
+                        data: pdfBase64,
+                        type: "application/pdf"
+                    },
+                    {
+                        name: "Опросный лист.xlsx", // Имя файла, которое будет видно получателю
+                        data: excelBase64,
+                        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                    }
+                ]
             });
 
             alert("Опросный лист успешно отправлен!");
 
         } catch (err) {
-            console.error("Ошибка при отправке формы:", err); // Используем console.error для более заметного вывода
+            console.error("Ошибка при отправке формы:", err);
             errorMessageDiv.textContent = `Ошибка: ${err.message || "Неизвестная ошибка."} Пожалуйста, попробуйте еще раз.`;
             errorMessageDiv.style.display = 'block';
         }
     }
-
-    // Новая вспомогательная функция, которая только генерирует PDF и возвращает его как Blob
-async function generatePDFBlob() { // Изменено название функции
-    const originalContent = document.getElementById("pdf-content");
-    const clone = originalContent.cloneNode(true);
-
-    // Убедимся, что отображается только нужная секция
-    clone.querySelectorAll(".analyzer-section").forEach(section => {
-        section.style.display = "none";
-    });
-    const material = document.getElementById("material").value;
-    const selected = clone.querySelector(`#section-${material}`);
-    if (selected) selected.style.display = "block";
-
-    // Заменяем поля ввода на простой текст для PDF
-    clone.querySelectorAll("input, select, textarea").forEach(el => {
-        // Пропускаем hidden input и file input
-        if (el.type === "hidden" || el.type === "file") return;
-        // Пропускаем кнопки (их нет в clone, но для безопасности)
-        if (el.tagName === 'BUTTON') return;
-
-        const div = document.createElement("div");
-        div.style.padding = "4px 8px";
-        div.style.border = "1px solid #ccc";
-        div.style.borderRadius = "3px";
-        div.style.minHeight = "20px";
-        div.style.marginBottom = "4px";
-        div.style.backgroundColor = "#f9f9f9";
-        div.style.fontSize = "13px";
-
-        if (el.type === "checkbox") {
-            div.textContent = el.checked ? "Да" : "Нет";
-            // Добавляем атрибут для стилей при печати, если нужен
-            el.closest(".form-check").querySelector("label").setAttribute("data-checked", el.checked ? "✔" : "✖");
-        } else if (el.tagName === "SELECT") {
-            div.textContent = el.options[el.selectedIndex]?.text || "—";
-        }
-        else {
-            div.textContent = el.value?.trim() || "—";
-        }
-        el.replaceWith(div);
-    });
-
-    // Встраиваем динамические элементы в клон для PDF (скопировать из предыдущего полного кода)
-    const allDynamicContainers = Array.from(document.querySelectorAll('div[id$="elements-ca-u"], div[id$="light-elements"], div[id$="sinter-elements-ca-u"], div[id$="multiplex-elements-ca-u"], div[id$="multiplex-light-elements"], div[id$="courier-elements-ca-u"], div[id$="courier-light-elements"]')).map(el => el.id);
-
-    allDynamicContainers.forEach(id => {
-        const originalBlock = document.getElementById(id);
-        const cloneBlock = clone.querySelector(`#${id}`);
-        if (!originalBlock || !cloneBlock) return;
-
-        cloneBlock.innerHTML = "";
-        const dynamicElements = dynamicElementData[id];
-        if (dynamicElements) {
-            dynamicElements.forEach(entry => {
-                const div = document.createElement("div");
-                div.textContent = `${entry.element || "—"} — ${entry.range || "—"}`;
-                div.style.marginBottom = "4px";
-                cloneBlock.appendChild(div);
-            });
-        }
-    });
-
-    // Встраивание изображения в PDF (скопировать из предыдущего полного кода)
-    const photoInputId = `installation_photo_${material}`;
-    const photoInput = document.getElementById(photoInputId);
-    const jpegData = photoInput?.dataset?.jpeg;
-    if (jpegData) {
-        const img = document.createElement("img");
-        img.src = jpegData;
-        img.style.maxWidth = "100%";
-        img.style.marginTop = "10px";
-        img.style.pageBreakInside = 'avoid';
-        if (selected) {
-            selected.appendChild(img);
-        } else {
-            clone.appendChild(img);
-        }
-    }
-
-
-    // Создаем временный элемент-обертку для html2pdf
-    const wrapper = document.createElement("div");
-    wrapper.style.cssText = "position: absolute; top: -9999px; left: -9999px; width: 210mm; padding: 20px; background: white; opacity: 0; z-index: -1;";
-    wrapper.appendChild(clone);
-    document.body.appendChild(wrapper);
-
-    const opt = {
-        filename: 'oprosny_list.pdf',
-        html2canvas: { scale: 2, useCORS: true },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-    };
-
-    let pdfBlob;
-    try {
-        pdfBlob = await html2pdf().set(opt).from(wrapper).outputPdf('blob');
-    } finally {
-        if (document.body.contains(wrapper)) {
-            document.body.removeChild(wrapper);
-        }
-    }
-
-    // Здесь больше НЕТ загрузки на transfer.sh
-    // Вместо этого функция просто ВОЗВРАЩАЕТ pdfBlob
-    return pdfBlob;
-}
-
 
     function addElementRow(containerId) {
         const container = document.getElementById(containerId);
@@ -829,7 +842,6 @@ async function generatePDFBlob() { // Изменено название функ
         saveDynamicValues(containerId);
     }
 
-    // Делаем функцию доступной глобально
     window.addElementRow = addElementRow;
 </script>
 
