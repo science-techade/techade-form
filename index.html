@@ -538,14 +538,42 @@ document.addEventListener("DOMContentLoaded", function () {
 
 function submitForm() {
   const form = document.getElementById("form");
-  const pdfPreview = document.getElementById("pdf-preview");
   const email = form.email.value;
   const material = form.material.value;
 
   if (!email) return alert("Введите email");
 
+  // Клонируем форму
   const clone = form.cloneNode(true);
+  clone.innerHTML = clone.innerHTML.trim();
+  clone.style.margin = "0";
+  clone.style.padding = "0";
+  clone.style.width = "100%";
+  clone.style.boxSizing = "border-box";
 
+  // Заменяем все поля input/select на текст
+  clone.querySelectorAll("input, select, textarea").forEach(el => {
+    const div = document.createElement("div");
+    div.style.padding = "4px 8px";
+    div.style.border = "1px solid #ccc";
+    div.style.borderRadius = "3px";
+    div.style.minHeight = "20px";
+    div.style.marginBottom = "4px";
+    div.style.backgroundColor = "#f9f9f9";
+    div.style.fontSize = "13px";
+
+    if (el.type === "checkbox") {
+      div.textContent = el.checked ? "✔ Да" : "— Нет";
+    } else if (el.type === "file") {
+      div.textContent = "";
+    } else {
+      div.textContent = el.value?.trim() || "—";
+    }
+
+    el.replaceWith(div);
+  });
+
+  // Обновляем динамические элементы
   containers.forEach(id => {
     saveDynamicValues(id);
     const original = document.getElementById(id);
@@ -561,43 +589,22 @@ function submitForm() {
     });
   });
 
-  // Показать только выбранную секцию в клоне (все скрытые по умолчанию)
-const allSections = clone.querySelectorAll(".analyzer-section");
-allSections.forEach(section => {
-  section.style.display = "none";
-});
+  // Показываем только активную секцию
+  const allSections = clone.querySelectorAll(".analyzer-section");
+  allSections.forEach(section => {
+    section.style.display = "none";
+  });
 
-const visibleSection = clone.querySelector(`#section-${material}`);
-if (visibleSection) {
-  visibleSection.style.display = "block";
-  visibleSection.classList.remove("analyzer-section"); // убираем скрывающий стиль
-}
-
-
-  clone.querySelectorAll("input, select, textarea").forEach(el => {
-  const div = document.createElement("div");
-  div.style.padding = "4px 8px";
-  div.style.border = "1px solid #ccc";
-  div.style.borderRadius = "3px";
-  div.style.minHeight = "20px";
-  div.style.marginBottom = "4px";
-  div.style.backgroundColor = "#f9f9f9";
-  div.style.fontSize = "13px";
-
-  if (el.type === "checkbox") {
-    div.textContent = el.checked ? "✔ Да" : "— Нет";
-  } else if (el.type === "file") {
-    div.textContent = "";
-  } else {
-    div.textContent = el.value?.trim() || "—";
+  const visibleSection = clone.querySelector(`#section-${material}`);
+  if (visibleSection) {
+    visibleSection.style.display = "block";
+    visibleSection.classList.remove("analyzer-section");
   }
 
-  el.replaceWith(div);
-});
-
-
+  // Удаляем кнопки
   clone.querySelectorAll("button").forEach(btn => btn.remove());
 
+  // Вставляем превью изображения, если есть
   const photoInput = document.getElementById(`installation_photo_${material}`);
   const jpegData = photoInput?.dataset?.jpeg;
   if (jpegData) {
@@ -608,24 +615,23 @@ if (visibleSection) {
     clone.appendChild(img);
   }
 
+  // Вставляем во временный контейнер
   const tempContainer = document.createElement("div");
   tempContainer.style.position = "absolute";
-tempContainer.style.left = "-9999px";
-tempContainer.style.top = "0";
+  tempContainer.style.left = "-9999px";
+  tempContainer.style.top = "0";
   tempContainer.appendChild(clone);
-  clone.style.margin = "0";
-clone.style.padding = "0";
-clone.style.width = "100%";
-clone.style.boxSizing = "border-box";
   document.body.appendChild(tempContainer);
 
-const opt = {
-  filename: 'oprosny_list.pdf',
-  html2canvas: { scale: 2, useCORS: true },
-  jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-  pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-};
+  // Опции PDF
+  const opt = {
+    filename: 'oprosny_list.pdf',
+    html2canvas: { scale: 2, useCORS: true },
+    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+    pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+  };
 
+  // Генерация PDF и отправка
   html2pdf().set(opt).from(clone).outputPdf('blob')
     .then(blob => {
       html2pdf().set(opt).from(clone).save();
@@ -642,6 +648,7 @@ const opt = {
     .then(res => res.json())
     .then(data => {
       if (!data || !data.data || !data.data.url) throw new Error("Не удалось получить ссылку на PDF");
+
       const templateParams = {
         to: `${email}, science.techade@gmail.com`,
         email: email,
@@ -656,6 +663,7 @@ const opt = {
         time: new Date().toLocaleString(),
         pdf_link: data.data.url
       };
+
       return emailjs.send("service_1rnpxea", "template_sk137ts", templateParams);
     })
     .then(() => alert("PDF сохранён и отправлен по email."))
@@ -664,6 +672,7 @@ const opt = {
       alert("Ошибка: " + (err.message || err));
     });
 }
+
 
 function addElementRow(containerId) {
   const container = document.getElementById(containerId);
