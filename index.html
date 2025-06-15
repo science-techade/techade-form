@@ -561,10 +561,18 @@ function submitForm() {
     });
   });
 
-  const visibleSection = clone.querySelector(`#section-${material}`);
-  if (visibleSection) {
-    visibleSection.style.display = "block";
-  }
+  // Показать только выбранную секцию в клоне (все скрытые по умолчанию)
+const allSections = clone.querySelectorAll(".analyzer-section");
+allSections.forEach(section => {
+  section.style.display = "none";
+});
+
+const visibleSection = clone.querySelector(`#section-${material}`);
+if (visibleSection) {
+  visibleSection.style.display = "block";
+  visibleSection.classList.remove("analyzer-section"); // убираем скрывающий стиль
+}
+
 
   clone.querySelectorAll("input, select, textarea").forEach(el => {
     const div = document.createElement("div");
