@@ -1,747 +1,849 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Опросный лист по техпроцессу</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <script src="https://cdn.jsdelivr.net/npm/emailjs-com@2.6.4/dist/email.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-  <style>
-    .element-row { display: flex; gap: 10px; margin-bottom: 10px; }
-    .element-row input { flex: 1; }
-    .element-row button { white-space: nowrap; }
-    .analyzer-section, .conditional-block { display: none; margin-top: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 5px; background-color: #f9f9f9; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Опросный лист по техпроцессу</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        .element-row { display: flex; gap: 10px; margin-bottom: 10px; }
+        .element-row input { flex: 1; }
+        .element-row button { white-space: nowrap; }
+        .analyzer-section, .conditional-block { display: none; margin-top: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 5px; background-color: #f9f9f9; }
+        /* Стили для PDF - скрываем элементы управления, которые не нужны в PDF */
+        @media print {
+            .btn, .form-control[type="file"] {
+                display: none !important;
+            }
+            /* Убедимся, что поля формы правильно отображаются в PDF */
+            .form-control, .form-select {
+                border: none !important;
+                background-color: transparent !important;
+                padding: 0 !important;
+            }
+            .form-check-input {
+                visibility: hidden; /* Скрываем реальный чекбокс */
+            }
+            .form-check-label::before {
+                content: attr(data-checked); /* Используем атрибут для отображения */
+                margin-right: 5px;
+                font-size: 1.2em;
+            }
+            /* Дополнительные стили для PDF, чтобы избежать обрезки контента */
+            .container {
+                width: 100% !important;
+                max-width: none !important;
+                padding: 0 !important;
+                margin: 0 !important;
+            }
+        }
+    </style>
 </head>
 <body>
 
 <div class="container mt-4">
-  <h2 class="mb-4">Опросный лист по техпроцессу</h2>
-  <form id="form">
-  <div id="pdf-content">
-  <input type="hidden" name="pdf_data" id="pdf_data">
-    <!-- Основные сведения -->
-    <div class="mb-4">
-      <h5>Основные сведения</h5>
-      <div class="mb-3">
-        <label for="date" class="form-label">Дата заполнения опросного листа</label>
-        <input type="date" id="date" name="date" class="form-control" required>
-      </div>
-      <div class="mb-3">
-        <label for="company" class="form-label">Название компании</label>
-        <input type="text" id="company" name="company" class="form-control" required>
-      </div>
-      <div class="mb-3">
-        <label for="contact_person" class="form-label">Контактное лицо</label>
-        <input type="text" id="contact_person" name="contact_person" class="form-control">
-      </div>
-      <div class="mb-3">
-        <label for="phone" class="form-label">Телефон</label>
-        <input type="tel" id="phone" name="phone" class="form-control">
-      </div>
-      <div class="mb-3">
-        <label for="email" class="form-label">Email</label>
-        <input type="email" id="email" name="email" class="form-control">
-      </div>
-      <div class="mb-3">
-        <label for="country" class="form-label">Страна</label>
-        <input type="text" id="country" name="country" class="form-control">
-      </div>
-      <div class="mb-3">
-        <label for="location" class="form-label">Местонахождение</label>
-        <input type="text" id="location" name="location" class="form-control">
-      </div>
-    </div>
+    <h2 class="mb-4">Опросный лист по техпроцессу</h2>
+    <form id="form">
+        <div id="pdf-content">
+            <input type="hidden" name="pdf_data" id="pdf_data">
+            <div class="mb-4">
+                <h5>Основные сведения</h5>
+                <div class="mb-3">
+                    <label for="date" class="form-label">Дата заполнения опросного листа</label>
+                    <input type="date" id="date" name="date" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label for="company" class="form-label">Название компании</label>
+                    <input type="text" id="company" name="company" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label for="contact_person" class="form-label">Контактное лицо</label>
+                    <input type="text" id="contact_person" name="contact_person" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label for="phone" class="form-label">Телефон</label>
+                    <input type="tel" id="phone" name="phone" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label for="email" class="form-label">Email</label>
+                    <input type="email" id="email" name="email" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label for="country" class="form-label">Страна</label>
+                    <input type="text" id="country" name="country" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label for="location" class="form-label">Местонахождение</label>
+                    <input type="text" id="location" name="location" class="form-control">
+                </div>
+            </div>
 
-    <!-- Выпадающий список выбора материала -->
-    <div class="mb-3">
-      <label for="material" class="form-label">Тип анализируемого материала</label>
-      <select id="material" name="material" class="form-select" required>
-        <option value="">Выберите...</option>
-        <option value="pulp">Пульпа (1–3 потока для анализа)</option>
-        <option value="sinter">Шихта / руда</option>
-        <option value="multiplex">Пульпа с мультиплексором</option>
-        <option value="courier">Пульпа с мультиплексором (на замену анализатора Курьер)</option>
-      </select>
-    </div>
+            <div class="mb-3">
+                <label for="material" class="form-label">Тип анализируемого материала</label>
+                <select id="material" name="material" class="form-select" required>
+                    <option value="">Выберите...</option>
+                    <option value="pulp">Пульпа (1–3 потока для анализа)</option>
+                    <option value="sinter">Шихта / руда</option>
+                    <option value="multiplex">Пульпа с мультиплексором</option>
+                    <option value="courier">Пульпа с мультиплексором (на замену анализатора Курьер)</option>
+                </select>
+            </div>
 
-    <!-- Секции динамически отображаются здесь -->
-    <div id="section-pulp" class="analyzer-section">
-  <h5>Пульпа: оборудование</h5>
-  <div class="mb-3">
-    <label class="form-label">Количество точек для анализа</label>
-    <input type="number" name="streams" class="form-control">
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Характеристика подачи питания</label>
-    <select name="feed_type" id="feed_type" class="form-select">
-      <option value="">Выберите...</option>
-      <option value="naporny">Напорный</option>
-      <option value="samotek">Самотек</option>
-    </select>
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Диаметр</label>
-    <input type="text" name="pulp_diameter" class="form-control">
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Материал (нерж. сталь, резиновая футеровка и т.д.)</label>
-    <input type="text" name="pulp_material" class="form-control">
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Давление нагнетания / Угол разгрузки</label>
-    <input type="text" name="pulp_pressure_angle" class="form-control">
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Температура окружающей среды (мин/макс)</label>
-    <input type="text" name="pulp_temperature" class="form-control">
-  </div>
-  <div class="mb-3">
-    <h5>Анализируемые элементы от Ca до U + диапазон концентраций</h5>
-    <div id="elements-ca-u"></div>
-    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addElementRow('elements-ca-u')">+ Добавить элемент</button>
-  </div>
-  <div class="mb-3">
-    <h5>Анализ легких химических элементов</h5>
-    <div id="light-elements"></div>
-    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addElementRow('light-elements')">+ Добавить элемент</button>
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Плотность</label>
-    <input type="text" name="pulp_density" class="form-control">
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Время измерения (мин/сред/макс), сек</label>
-    <input type="text" name="pulp_measurement_time" class="form-control">
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Наличие тяжёлых металлов в пульпе</label>
-    <input type="text" name="pulp_heavy_metals" class="form-control">
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Состав жидкой фазы</label>
-    <input type="text" name="pulp_liquid_phase" class="form-control">
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Перечень используемых реагентов</label>
-    <input type="text" name="pulp_reagents" class="form-control">
-  </div>
-  <div class="mb-3">
-    <h5>Дополнительные условия</h5>
-    <div class="form-check">
-      <input class="form-check-input" type="checkbox" id="xrf_lab_pulp" name="xrf_lab">
-      <label class="form-check-label" for="xrf_lab_pulp">Наличие РФА-лаборатории на предприятии</label>
-    </div>
-    <div class="form-check">
-      <input class="form-check-input" type="checkbox" id="personnel_access_pulp" name="personnel_access">
-      <label class="form-check-label" for="personnel_access_pulp">Допуск персонала к источникам</label>
-    </div>
-    <div class="form-check">
-      <input class="form-check-input" type="checkbox" id="local_network_pulp" name="local_network">
-      <label class="form-check-label" for="local_network_pulp">Наличие локальной сети</label>
-      </div> 
- <div class="mb-3">
-    <label class="form-label" for="installation_location_pulp">Местонахождение установки</label>
-    <input type="text" class="form-control mb-2" id="installation_location_pulp" name="installation_location_pulp">
+            <div id="section-pulp" class="analyzer-section">
+                <h5>Пульпа: оборудование</h5>
+                <div class="mb-3">
+                    <label class="form-label">Количество точек для анализа</label>
+                    <input type="number" name="pulp_streams" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Характеристика подачи питания</label>
+                    <select name="pulp_feed_type" id="feed_type" class="form-select">
+                        <option value="">Выберите...</option>
+                        <option value="naporny">Напорный</option>
+                        <option value="samotek">Самотек</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Диаметр</label>
+                    <input type="text" name="pulp_diameter" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Материал (нерж. сталь, резиновая футеровка и т.д.)</label>
+                    <input type="text" name="pulp_material_type" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Давление нагнетания / Угол разгрузки</label>
+                    <input type="text" name="pulp_pressure_angle" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Температура окружающей среды (мин/макс)</label>
+                    <input type="text" name="pulp_temperature" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <h5>Анализируемые элементы от Ca до U + диапазон концентраций</h5>
+                    <div id="elements-ca-u"></div>
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addElementRow('elements-ca-u')">+ Добавить элемент</button>
+                </div>
+                <div class="mb-3">
+                    <h5>Анализ легких химических элементов</h5>
+                    <div id="light-elements"></div>
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addElementRow('light-elements')">+ Добавить элемент</button>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Плотность</label>
+                    <input type="text" name="pulp_density" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Время измерения (мин/сред/макс), сек</label>
+                    <input type="text" name="pulp_measurement_time" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Наличие тяжёлых металлов в пульпе</label>
+                    <input type="text" name="pulp_heavy_metals" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Состав жидкой фазы</label>
+                    <input type="text" name="pulp_liquid_phase" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Перечень используемых реагентов</label>
+                    <input type="text" name="pulp_reagents" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <h5>Дополнительные условия</h5>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="xrf_lab_pulp" name="xrf_lab_pulp">
+                        <label class="form-check-label" for="xrf_lab_pulp">Наличие РФА-лаборатории на предприятии</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="personnel_access_pulp" name="personnel_access_pulp">
+                        <label class="form-check-label" for="personnel_access_pulp">Допуск персонала к источникам</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="local_network_pulp" name="local_network_pulp">
+                        <label class="form-check-label" for="local_network_pulp">Наличие локальной сети</label>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="installation_location_pulp">Местонахождение установки</label>
+                        <input type="text" class="form-control mb-2" id="installation_location_pulp" name="installation_location_pulp">
 
-    <label class="form-label" for="installation_photo_pulp">Загрузите фото местонахождения (JPG, PNG)</label>
-    <input type="file" class="form-control mb-2" id="installation_photo_pulp" name="installation_photo_pulp" accept=".jpg,.jpeg,.png,image/jpeg,image/png">
+                        <label class="form-label" for="installation_photo_pulp">Загрузите фото местонахождения (JPG, PNG)</label>
+                        <input type="file" class="form-control mb-2" id="installation_photo_pulp" name="installation_photo_pulp" accept=".jpg,.jpeg,.png,image/jpeg,image/png">
 
-    <img id="installation_preview_pulp" alt="Превью изображения" style="max-width: 100%; height: auto; display: none; border: 1px solid #ccc; margin-top: 10px;" />
-  </div>
+                        <img id="installation_preview_pulp" alt="Превью изображения" style="max-width: 100%; height: auto; display: none; border: 1px solid #ccc; margin-top: 10px;" />
+                    </div>
 
-    <div class="mb-3">
-      <label class="form-label" for="water_composition_pulp">Состав оборотной воды</label>
-      <input type="text" class="form-control" id="water_composition_pulp" name="water_composition">
-    </div>
-    <div class="form-check">
-      <input class="form-check-input" type="checkbox" id="video_surveillance_pulp" name="video_surveillance">
-      <label class="form-check-label" for="video_surveillance_pulp">Наличие видеонаблюдения</label>
-    </div>
-  </div>
-    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="water_composition_pulp">Состав оборотной воды</label>
+                        <input type="text" class="form-control" id="water_composition_pulp" name="water_composition_pulp">
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="video_surveillance_pulp" name="video_surveillance_pulp">
+                        <label class="form-check-label" for="video_surveillance_pulp">Наличие видеонаблюдения</label>
+                    </div>
+                </div>
+            </div>
 
-    <div id="section-sinter" class="analyzer-section">
-  <h5>Шихта / руда: оборудование</h5>
-  <div class="mb-3">
-    <label class="form-label">Рассматриваются анализаторы</label>
-    <select name="sinter_analyzer_type" class="form-select">
-      <option value="">Выберите...</option>
-      <option value="arp-1c">АРП-1Ц</option>
-      <option value="arp-2c">АРП-2Ц</option>
-    </select>
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Скорость ленты (м/с)</label>
-    <input type="text" name="sinter_belt_speed" class="form-control">
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Нагрузка на ленте (тонн/час, мин/макс)</label>
-    <input type="text" name="sinter_belt_load" class="form-control">
-  </div>
-  <div class="mb-3">
-    <h5>Анализируемые элементы от Ca до U + диапазон концентраций</h5>
-    <div id="sinter-elements-ca-u"></div>
-    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addElementRow('sinter-elements-ca-u')">+ Добавить элемент</button>
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Размер кусков (макс/сред), мм</label>
-    <input type="text" name="sinter_grain_size" class="form-control">
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Плотность</label>
-    <input type="text" name="sinter_density" class="form-control">
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Время измерения (мин/сред/макс), сек</label>
-    <input type="text" name="sinter_measurement_time" class="form-control">
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Наличие тяжёлых металлов в шихте</label>
-    <input type="text" name="sinter_heavy_metals" class="form-control">
-  </div>
-      <div class="mb-3">
-    <h5>Дополнительные условия</h5>
-    <div class="form-check">
-      <input class="form-check-input" type="checkbox" id="xrf_lab_sinter" name="xrf_lab">
-      <label class="form-check-label" for="xrf_lab_sinter">Наличие РФА-лаборатории на предприятии</label>
-    </div>
-    <div class="form-check">
-      <input class="form-check-input" type="checkbox" id="personnel_access_sinter" name="personnel_access">
-      <label class="form-check-label" for="personnel_access_sinter">Допуск персонала к источникам</label>
-    </div>
-    <div class="form-check">
-      <input class="form-check-input" type="checkbox" id="local_network_sinter" name="local_network">
-      <label class="form-check-label" for="local_network_sinter">Наличие локальной сети</label>
-    </div>
-    <div class="mb-3">
-    <label class="form-label" for="installation_location_sinter">Местонахождение установки</label>
-    <input type="text" class="form-control mb-2" id="installation_location_sinter" name="installation_location_sinter">
+            <div id="section-sinter" class="analyzer-section">
+                <h5>Шихта / руда: оборудование</h5>
+                <div class="mb-3">
+                    <label class="form-label">Рассматриваются анализаторы</label>
+                    <select name="sinter_analyzer_type" class="form-select">
+                        <option value="">Выберите...</option>
+                        <option value="arp-1c">АРП-1Ц</option>
+                        <option value="arp-2c">АРП-2Ц</option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Скорость ленты (м/с)</label>
+                    <input type="text" name="sinter_belt_speed" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Нагрузка на ленте (тонн/час, мин/макс)</label>
+                    <input type="text" name="sinter_belt_load" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <h5>Анализируемые элементы от Ca до U + диапазон концентраций</h5>
+                    <div id="sinter-elements-ca-u"></div>
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addElementRow('sinter-elements-ca-u')">+ Добавить элемент</button>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Размер кусков (макс/сред), мм</label>
+                    <input type="text" name="sinter_grain_size" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Плотность</label>
+                    <input type="text" name="sinter_density" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Время измерения (мин/сред/макс), сек</label>
+                    <input type="text" name="sinter_measurement_time" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Наличие тяжёлых металлов в шихте</label>
+                    <input type="text" name="sinter_heavy_metals" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <h5>Дополнительные условия</h5>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="xrf_lab_sinter" name="xrf_lab_sinter">
+                        <label class="form-check-label" for="xrf_lab_sinter">Наличие РФА-лаборатории на предприятии</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="personnel_access_sinter" name="personnel_access_sinter">
+                        <label class="form-check-label" for="personnel_access_sinter">Допуск персонала к источникам</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="local_network_sinter" name="local_network_sinter">
+                        <label class="form-check-label" for="local_network_sinter">Наличие локальной сети</label>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="installation_location_sinter">Местонахождение установки</label>
+                        <input type="text" class="form-control mb-2" id="installation_location_sinter" name="installation_location_sinter">
 
-    <label class="form-label" for="installation_photo_sinter">Загрузите фото местонахождения (JPG, PNG)</label>
-    <input type="file" class="form-control mb-2" id="installation_photo_sinter" name="installation_photo_sinter" accept=".jpg,.jpeg,.png,image/jpeg,image/png">
+                        <label class="form-label" for="installation_photo_sinter">Загрузите фото местонахождения (JPG, PNG)</label>
+                        <input type="file" class="form-control mb-2" id="installation_photo_sinter" name="installation_photo_sinter" accept=".jpg,.jpeg,.png,image/jpeg,image/png">
 
-    <img id="installation_preview_sinter" alt="Превью изображения" style="max-width: 100%; height: auto; display: none; border: 1px solid #ccc; margin-top: 10px;" />
-  </div>
-    <div class="form-check">
-      <input class="form-check-input" type="checkbox" id="video_surveillance_sinter" name="video_surveillance">
-      <label class="form-check-label" for="video_surveillance_sinter">Наличие видеонаблюдения</label>
-    </div>
+                        <img id="installation_preview_sinter" alt="Превью изображения" style="max-width: 100%; height: auto; display: none; border: 1px solid #ccc; margin-top: 10px;" />
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="video_surveillance_sinter" name="video_surveillance_sinter">
+                        <label class="form-check-label" for="video_surveillance_sinter">Наличие видеонаблюдения</label>
+                    </div>
+                </div>
+            </div>
+
+            <div id="section-multiplex" class="analyzer-section">
+                <h5>Пульпа с мультиплексором</h5>
+                <div class="mb-3">
+                    <label class="form-label">Количество точек для анализа</label>
+                    <input type="number" name="multiplex_streams" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Расстояния между точками</label>
+                    <input type="text" name="multiplex_distances" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Тип трубы и её характеристики (диаметр)</label>
+                    <input type="text" name="multiplex_pipe_type" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Давление в трубопроводе</label>
+                    <input type="text" name="multiplex_pressure" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Температура окружающей среды (мин/макс)</label>
+                    <input type="text" name="multiplex_temperature" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <h5>Анализируемые элементы от Ca до U + диапазон концентраций</h5>
+                    <div id="multiplex-elements-ca-u"></div>
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addElementRow('multiplex-elements-ca-u')">+ Добавить элемент</button>
+                </div>
+                <div class="mb-3">
+                    <h5>Анализ легких химических элементов</h5>
+                    <div id="multiplex-light-elements"></div>
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addElementRow('multiplex-light-elements')">+ Добавить элемент</button>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Размер кусков (макс/сред), мм</label>
+                    <input type="text" name="multiplex_grain_size" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Плотность</label>
+                    <input type="text" name="multiplex_density" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Время измерения (мин/сред/макс), сек</label>
+                    <input type="text" name="multiplex_measurement_time" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Наличие тяжёлых металлов</label>
+                    <input type="text" name="multiplex_heavy_metals" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Состав жидкой фазы</label>
+                    <input type="text" name="multiplex_liquid_phase" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Перечень используемых реагентов</label>
+                    <input type="text" name="multiplex_reagents" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <h5>Дополнительные условия</h5>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="xrf_lab_multiplex" name="xrf_lab_multiplex">
+                        <label class="form-check-label" for="xrf_lab_multiplex">Наличие РФА-лаборатории на предприятии</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="personnel_access_multiplex" name="personnel_access_multiplex">
+                        <label class="form-check-label" for="personnel_access_multiplex">Допуск персонала к источникам</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="local_network_multiplex" name="local_network_multiplex">
+                        <label class="form-check-label" for="local_network_multiplex">Наличие локальной сети</label>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="installation_location_multiplex">Местонахождение установки</label>
+                        <input type="text" class="form-control mb-2" id="installation_location_multiplex" name="installation_location_multiplex">
+
+                        <label class="form-label" for="installation_photo_multiplex">Загрузите фото местонахождения (JPG, PNG)</label>
+                        <input type="file" class="form-control mb-2" id="installation_photo_multiplex" name="installation_photo_multiplex" accept=".jpg,.jpeg,.png,image/jpeg,image/png">
+
+                        <img id="installation_preview_multiplex" alt="Превью изображения" style="max-width: 100%; height: auto; display: none; border: 1px solid #ccc; margin-top: 10px;" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="water_composition_multiplex">Состав оборотной воды</label>
+                        <input type="text" class="form-control" id="water_composition_multiplex" name="water_composition_multiplex">
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="video_surveillance_multiplex" name="video_surveillance_multiplex">
+                        <label class="form-check-label" for="video_surveillance_multiplex">Наличие видеонаблюдения</label>
+                    </div>
+                </div>
+            </div>
+
+            <div id="section-courier" class="analyzer-section">
+                <h5>Пульпа с мультиплексором (на замену Курьер)</h5>
+                <div class="mb-3">
+                    <label class="form-label">Наличие существующей системы отбора/доставки проб (Courier, MOG или иная)</label>
+                    <input type="text" name="courier_existing_system" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Планируется ли подключение к существующему мультиплексору</label>
+                    <input type="text" name="courier_connection_plan" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Количество точек для анализа</label>
+                    <input type="number" name="courier_streams" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Температура окружающей среды (мин/макс)</label>
+                    <input type="text" name="courier_temperature" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <h5>Анализируемые элементы от Ca до U + диапазон концентраций</h5>
+                    <div id="courier-elements-ca-u"></div>
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addElementRow('courier-elements-ca-u')">+ Добавить элемент</button>
+                </div>
+                <div class="mb-3">
+                    <h5>Анализ легких химических элементов</h5>
+                    <div id="courier-light-elements"></div>
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addElementRow('courier-light-elements')">+ Добавить элемент</button>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Плотность</label>
+                    <input type="text" name="courier_density" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Время измерения (мин/сред/макс), сек</label>
+                    <input type="text" name="courier_measurement_time" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Наличие тяжёлых металлов в пульпе</label>
+                    <input type="text" name="courier_heavy_metals" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Состав жидкой фазы</label>
+                    <input type="text" name="courier_liquid_phase" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Перечень используемых реагентов</label>
+                    <input type="text" name="courier_reagents" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <h5>Дополнительные условия</h5>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="xrf_lab_courier" name="xrf_lab_courier">
+                        <label class="form-check-label" for="xrf_lab_courier">Наличие РФА-лаборатории на предприятии</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="personnel_access_courier" name="personnel_access_courier">
+                        <label class="form-check-label" for="personnel_access_courier">Допуск персонала к источникам</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="local_network_courier" name="local_network_courier">
+                        <label class="form-check-label" for="local_network_courier">Наличие локальной сети</label>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="installation_location_courier">Местонахождение установки</label>
+                        <input type="text" class="form-control mb-2" id="installation_location_courier" name="installation_location_courier">
+
+                        <label class="form-label" for="installation_photo_courier">Загрузите фото местонахождения (JPG, PNG)</label>
+                        <input type="file" class="form-control mb-2" id="installation_photo_courier" name="installation_photo_courier" accept=".jpg,.jpeg,.png,image/jpeg,image/png">
+
+                        <img id="installation_preview_courier" alt="Превью изображения" style="max-width: 100%; height: auto; display: none; border: 1px solid #ccc; margin-top: 10px;" />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="water_composition_courier">Состав оборотной воды</label>
+                        <input type="text" class="form-control" id="water_composition_courier" name="water_composition_courier">
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="video_surveillance_courier" name="video_surveillance_courier">
+                        <label class="form-check-label" for="video_surveillance_courier">Наличие видеонаблюдения</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="mb-3 mt-4">
+            <button id="submit-button" type="button" class="btn btn-primary">Отправить</button>
+        </div>
+    </form>
+
+    <iframe id="pdf-preview" style="width: 100%; height: 500px; margin-top: 20px; display: none;"></iframe>
+
+    <div id="error-message" class="alert alert-danger mt-3" style="display: none;"></div>
+
 </div>
-</div> 
-
-<div id="section-multiplex" class="analyzer-section">
-  <h5>Пульпа с мультиплексором</h5>
-  <div class="mb-3">
-    <label class="form-label">Количество точек для анализа</label>
-    <input type="number" name="multiplex_streams" class="form-control">
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Расстояния между точками</label>
-    <input type="text" name="multiplex_distances" class="form-control">
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Тип трубы и её характеристики (диаметр)</label>
-    <input type="text" name="multiplex_pipe_type" class="form-control">
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Давление в трубопроводе</label>
-    <input type="text" name="multiplex_pressure" class="form-control">
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Температура окружающей среды (мин/макс)</label>
-    <input type="text" name="multiplex_temperature" class="form-control">
-  </div>
-<div class="mb-3">
-        <h5>Анализируемые элементы от Ca до U + диапазон концентраций</h5>
-        <div id="multiplex-elements-ca-u"></div>
-        <button type="button" class="btn btn-outline-primary btn-sm" onclick="addElementRow('multiplex-elements-ca-u')">+ Добавить элемент</button>
-      </div>
-      <div class="mb-3">
-        <h5>Анализ легких химических элементов</h5>
-        <div id="multiplex-light-elements"></div>
-        <button type="button" class="btn btn-outline-primary btn-sm" onclick="addElementRow('multiplex-light-elements')">+ Добавить элемент</button>
-      </div>
-  <div class="mb-3">
-    <label class="form-label">Размер кусков (макс/сред), мм</label>
-    <input type="text" name="multiplex_grain_size" class="form-control">
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Плотность</label>
-    <input type="text" name="multiplex_density" class="form-control">
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Время измерения (мин/сред/макс), сек</label>
-    <input type="text" name="multiplex_measurement_time" class="form-control">
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Наличие тяжёлых металлов</label>
-    <input type="text" name="multiplex_heavy_metals" class="form-control">
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Состав жидкой фазы</label>
-    <input type="text" name="multiplex_liquid_phase" class="form-control">
-  </div>
-    <div class="mb-3">
-    <label class="form-label">Перечень используемых реагентов</label>
-    <input type="text" name="multiplex_reagents" class="form-control">
-  </div>
-  <div class="mb-3">
-    <h5>Дополнительные условия</h5>
-    <div class="form-check">
-      <input class="form-check-input" type="checkbox" id="xrf_lab_multiplex" name="xrf_lab">
-      <label class="form-check-label" for="xrf_lab_multiplex">Наличие РФА-лаборатории на предприятии</label>
-    </div>
-    <div class="form-check">
-      <input class="form-check-input" type="checkbox" id="personnel_access_multiplex" name="personnel_access">
-      <label class="form-check-label" for="personnel_access_multiplex">Допуск персонала к источникам</label>
-    </div>
-    <div class="form-check">
-      <input class="form-check-input" type="checkbox" id="local_network_multiplex" name="local_network">
-      <label class="form-check-label" for="local_network_multiplex">Наличие локальной сети</label>
-    </div>
-    <div class="mb-3">
-    <label class="form-label" for="installation_location_multiplex">Местонахождение установки</label>
-    <input type="text" class="form-control mb-2" id="installation_location_multiplex" name="installation_location_multiplex">
-
-    <label class="form-label" for="installation_photo_multiplex">Загрузите фото местонахождения (JPG, PNG)</label>
-    <input type="file" class="form-control mb-2" id="installation_photo_multiplex" name="installation_photo_multiplex" accept=".jpg,.jpeg,.png,image/jpeg,image/png">
-
-    <img id="installation_preview_multiplex" alt="Превью изображения" style="max-width: 100%; height: auto; display: none; border: 1px solid #ccc; margin-top: 10px;" />
-  </div>
-
-
-    <div class="mb-3">
-      <label class="form-label" for="water_composition_multiplex">Состав оборотной воды</label>
-      <input type="text" class="form-control" id="water_composition_multiplex" name="water_composition">
-    </div>
-    <div class="form-check">
-      <input class="form-check-input" type="checkbox" id="video_surveillance_multiplex" name="video_surveillance">
-      <label class="form-check-label" for="video_surveillance_multiplex">Наличие видеонаблюдения</label>
-    </div>
-  </div>
-</div>
-
-  <div id="section-courier" class="analyzer-section">
-      <h5>Пульпа с мультиплексором (на замену Курьер)</h5>
-      <div class="mb-3">
-        <label class="form-label">Наличие существующей системы отбора/доставки проб (Courier, MOG или иная)</label>
-        <input type="text" name="courier_existing_system" class="form-control">
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Планируется ли подключение к существующему мультиплексору</label>
-        <input type="text" name="courier_connection_plan" class="form-control">
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Количество точек для анализа</label>
-        <input type="number" name="courier_streams" class="form-control">
-      </div>
-      <div class="mb-3">
-        <label class="form-label">Температура окружающей среды (мин/макс)</label>
-        <input type="text" name="courier_temperature" class="form-control">
-      </div>
- <div class="mb-3">
-        <h5>Анализируемые элементы от Ca до U + диапазон концентраций</h5>
-        <div id="courier-elements-ca-u"></div>
-        <button type="button" class="btn btn-outline-primary btn-sm" onclick="addElementRow('courier-elements-ca-u')">+ Добавить элемент</button>
-      </div>
-      <div class="mb-3">
-        <h5>Анализ легких химических элементов</h5>
-        <div id="courier-light-elements"></div>
-        <button type="button" class="btn btn-outline-primary btn-sm" onclick="addElementRow('courier-light-elements')">+ Добавить элемент</button>
-      </div>
-  <div class="mb-3">
-    <label class="form-label">Плотность</label>
-    <input type="text" name="pulp_density" class="form-control">
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Время измерения (мин/сред/макс), сек</label>
-    <input type="text" name="pulp_measurement_time" class="form-control">
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Наличие тяжёлых металлов в пульпе</label>
-    <input type="text" name="pulp_heavy_metals" class="form-control">
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Состав жидкой фазы</label>
-    <input type="text" name="pulp_liquid_phase" class="form-control">
-  </div>
-  <div class="mb-3">
-    <label class="form-label">Перечень используемых реагентов</label>
-    <input type="text" name="pulp_reagents" class="form-control">
-  </div>
-    <div class="mb-3">
-    <h5>Дополнительные условия</h5>
-    <div class="form-check">
-      <input class="form-check-input" type="checkbox" id="xrf_lab_courier" name="xrf_lab">
-      <label class="form-check-label" for="xrf_lab_courier">Наличие РФА-лаборатории на предприятии</label>
-    </div>
-    <div class="form-check">
-      <input class="form-check-input" type="checkbox" id="personnel_access_courier" name="personnel_access">
-      <label class="form-check-label" for="personnel_access_courier">Допуск персонала к источникам</label>
-    </div>
-    <div class="form-check">
-      <input class="form-check-input" type="checkbox" id="local_network_courier" name="local_network">
-      <label class="form-check-label" for="local_network_courier">Наличие локальной сети</label>
-    </div>
- <div class="mb-3">
-    <label class="form-label" for="installation_location_courier">Местонахождение установки</label>
-    <input type="text" class="form-control mb-2" id="installation_location_courier" name="installation_location_courier">
-
-    <label class="form-label" for="installation_photo_courier">Загрузите фото местонахождения (JPG, PNG)</label>
-    <input type="file" class="form-control mb-2" id="installation_photo_courier" name="installation_photo_courier" accept=".jpg,.jpeg,.png,image/jpeg,image/png">
-
-    <img id="installation_preview_courier" alt="Превью изображения" style="max-width: 100%; height: auto; display: none; border: 1px solid #ccc; margin-top: 10px;" />
-  </div>
-
-
-    <div class="mb-3">
-      <label class="form-label" for="water_composition_courier">Состав оборотной воды</label>
-      <input type="text" class="form-control" id="water_composition_courier" name="water_composition">
-    </div>
-    <div class="form-check">
-      <input class="form-check-input" type="checkbox" id="video_surveillance_courier" name="video_surveillance">
-      <label class="form-check-label" for="video_surveillance_courier">Наличие видеонаблюдения</label>
-    </div>
-  </div>
-    </div>
-    </div>
-  <div class="mb-3">
-    <button id="submit-button" type="button" class="btn btn-primary">Отправить</button>
-  </div>
-</form>
-
-
-<iframe id="pdf-preview" style="width: 100%; height: 500px; margin-top: 20px; display: none;"></iframe>
-
-    
-<!-- Подключение EmailJS и html2pdf -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 
 <script>
-const dynamicElementData = {};
+    const dynamicElementData = {};
 
-function saveDynamicValues(containerId) {
-  const data = [];
-  document.querySelectorAll(`#${containerId} .element-row`).forEach(row => {
-    const inputs = row.querySelectorAll("input");
-    if (inputs.length >= 2) {
-      data.push({
-        element: inputs[0].value || '',
-        range: inputs[1].value || ''
-      });
-    }
-  });
-  dynamicElementData[containerId] = data;
-}
-
-function restoreDynamicValues(containerId) {
-  const container = document.getElementById(containerId);
-  if (!dynamicElementData[containerId]) return;
-
-  container.innerHTML = "";
-  dynamicElementData[containerId].forEach(entry => {
-    const wrapper = document.createElement("div");
-    wrapper.className = "element-row";
-
-    const inputElement = document.createElement("input");
-    inputElement.type = "text";
-    inputElement.placeholder = "Элемент (напр. Fe)";
-    inputElement.name = `${containerId}_element[]`;
-    inputElement.className = "form-control";
-    inputElement.value = entry.element;
-    inputElement.oninput = () => saveDynamicValues(containerId);
-
-    const inputRange = document.createElement("input");
-    inputRange.type = "text";
-    inputRange.placeholder = "Диапазон концентрации";
-    inputRange.name = `${containerId}_range[]`;
-    inputRange.className = "form-control";
-    inputRange.value = entry.range;
-    inputRange.oninput = () => saveDynamicValues(containerId);
-
-    const removeBtn = document.createElement("button");
-    removeBtn.type = "button";
-    removeBtn.className = "btn btn-outline-danger btn-sm";
-    removeBtn.textContent = "Удалить";
-    removeBtn.onclick = () => {
-      wrapper.remove();
-      saveDynamicValues(containerId);
-    };
-
-    wrapper.appendChild(inputElement);
-    wrapper.appendChild(inputRange);
-    wrapper.appendChild(removeBtn);
-    container.appendChild(wrapper);
-  });
-}
-
-// ВСТАВКА: автоматическое определение контейнеров и восстановление значений
-const containers = Array.from(document.querySelectorAll('div[id$="elements-ca-u"], div[id$="light-elements"], div[id$="sinter-elements-ca-u"], div[id$="multiplex-elements-ca-u"], div[id$="multiplex-light-elements"], div[id$="courier-elements-ca-u"], div[id$="courier-light-elements"]')).map(el => el.id);
-
-  function showAnalyzerSection(materialType) {
-  const sections = document.querySelectorAll('.analyzer-section');
-  sections.forEach(section => section.style.display = 'none');
-
-  const selectedSection = document.getElementById(`section-${materialType}`);
-  if (selectedSection) {
-    selectedSection.style.display = 'block';
-  }
-}
-
-function bindPhotoPreview(materialType) {
-  const input = document.getElementById(`installation_photo_${materialType}`);
-  const preview = document.getElementById(`installation_preview_${materialType}`);
-
-  if (!input || !preview) return;
-
-  input.addEventListener("change", (event) => {
-    const file = event.target.files[0];
-    if (file && file.type.startsWith("image/")) {
-      const reader = new FileReader();
-      reader.onload = function (e) {
-        preview.src = e.target.result;
-        preview.style.display = "block";
-        input.dataset.jpeg = e.target.result;
-      };
-      reader.readAsDataURL(file);
-    } else {
-      preview.style.display = "none";
-      preview.src = "";
-      input.dataset.jpeg = "";
-    }
-  });
-}
-
-  
-document.addEventListener("DOMContentLoaded", function () {
-  emailjs.init("lK76KGFPVwTGiY9vX");
-
-  const materialSelect = document.getElementById("material");
-  if (materialSelect) {
-    materialSelect.addEventListener("change", () => {
-      showAnalyzerSection(materialSelect.value);
-      containers.forEach(restoreDynamicValues);
-    });
-    showAnalyzerSection(materialSelect.value);
-    containers.forEach(restoreDynamicValues);
-  }
-
-  ["pulp", "sinter", "multiplex", "courier"].forEach(bindPhotoPreview);
-
-  const submitBtn = document.getElementById("submit-button");
-  if (submitBtn) {
-    submitBtn.addEventListener("click", submitForm);
-  }
-});
-
-function submitForm() {
-  const form = document.getElementById("form");
-  const email = form.email.value;
-  const material = form.material.value;
-  if (!email) return alert("Введите email");
-
-  let excelLink = "";
-  let pdfLink = "";
-
-  // --- СОХРАНЕНИЕ EXCEL ---
-  const dataRows = [];
-  const push = (label, val) => dataRows.push([label, val || "—"]);
-
-  push("Дата", form.date.value);
-  push("Компания", form.company.value);
-  push("Контактное лицо", form.contact_person.value);
-  push("Телефон", form.phone.value);
-  push("Email", form.email.value);
-  push("Страна", form.country.value);
-  push("Местонахождение", form.location.value);
-  push("Материал", form.material.value);
-
-  const section = document.getElementById(`section-${material}`);
-  if (section) {
-    section.querySelectorAll("input, select, textarea").forEach(input => {
-      if (input.type === "file") return;
-      const label = input.closest(".mb-3")?.querySelector("label")?.textContent?.trim() || input.name;
-      const value = input.type === "checkbox" ? (input.checked ? "Да" : "Нет") : input.value;
-      push(label, value);
-    });
-  }
-
-  containers.forEach(id => {
-    saveDynamicValues(id);
-    dynamicElementData[id].forEach(entry => {
-      push(`Элемент: ${entry.element}`, `Диапазон: ${entry.range}`);
-    });
-  });
-
-  const worksheet = XLSX.utils.aoa_to_sheet(dataRows);
-  const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Опросный лист");
-  const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-  const blobExcel = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-
-  const excelFile = new File([blobExcel], "oprosny_list.xlsx", { type: blobExcel.type });
-
-  fetch("https://transfer.sh/oprosny_list.xlsx", {
-    method: "PUT",
-    body: excelFile
-  })
-  .then(async res => {
-    if (!res.ok) throw new Error("Ошибка загрузки Excel на transfer.sh");
-    excelLink = await res.text();
-    return generatePDF(excelLink.trim());
-  })
-  .catch(err => {
-    console.error("Ошибка Excel:", err);
-    generatePDF("");
-  });
-
-  function generatePDF(excelLink) {
-    const originalContent = document.getElementById("pdf-content");
-    const clone = originalContent.cloneNode(true);
-
-    clone.querySelectorAll(".analyzer-section").forEach(section => {
-      section.style.display = "none";
-    });
-    const selected = clone.querySelector(`#section-${material}`);
-    if (selected) selected.style.display = "block";
-
-    containers.forEach(id => {
-      const originalBlock = document.getElementById(id);
-      const cloneBlock = clone.querySelector(`#${id}`);
-      if (!originalBlock || !cloneBlock) return;
-      cloneBlock.innerHTML = "";
-      dynamicElementData[id].forEach(entry => {
-        const div = document.createElement("div");
-        div.textContent = `${entry.element || "—"} — ${entry.range || "—"}`;
-        div.style.marginBottom = "4px";
-        cloneBlock.appendChild(div);
-      });
-    });
-
-    clone.querySelectorAll("input, select, textarea").forEach(el => {
-      const div = document.createElement("div");
-      div.style.padding = "4px 8px";
-      div.style.border = "1px solid #ccc";
-      div.style.borderRadius = "3px";
-      div.style.minHeight = "20px";
-      div.style.marginBottom = "4px";
-      div.style.backgroundColor = "#f9f9f9";
-      div.style.fontSize = "13px";
-      div.textContent = el.type === "checkbox" ? (el.checked ? "✔ Да" : "— Нет") : (el.value?.trim() || "—");
-      el.replaceWith(div);
-    });
-
-    clone.querySelectorAll("button").forEach(btn => btn.remove());
-
-    const photoInput = document.getElementById(`installation_photo_${material}`);
-    const jpegData = photoInput?.dataset?.jpeg;
-    if (jpegData) {
-      const img = document.createElement("img");
-      img.src = jpegData;
-      img.style.maxWidth = "100%";
-      img.style.marginTop = "10px";
-      clone.appendChild(img);
+    function saveDynamicValues(containerId) {
+        const data = [];
+        document.querySelectorAll(`#${containerId} .element-row`).forEach(row => {
+            const inputs = row.querySelectorAll("input");
+            if (inputs.length >= 2) {
+                data.push({
+                    element: inputs[0].value || '',
+                    range: inputs[1].value || ''
+                });
+            }
+        });
+        dynamicElementData[containerId] = data;
     }
 
-    const wrapper = document.createElement("div");
-    wrapper.style.cssText = "position: fixed; top: 0; left: 0; z-index: 9999; width: 210mm; padding: 20px; background: white; opacity: 1;";
-    wrapper.appendChild(clone);
-    document.body.appendChild(wrapper);
+    function restoreDynamicValues(containerId) {
+        const container = document.getElementById(containerId);
+        if (!dynamicElementData[containerId]) return;
 
-    const opt = {
-      filename: 'oprosny_list.pdf',
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-      pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-    };
+        container.innerHTML = ""; // Очищаем, чтобы восстановить
+        dynamicElementData[containerId].forEach(entry => {
+            const wrapper = document.createElement("div");
+            wrapper.className = "element-row";
 
-    setTimeout(() => {
-      html2pdf().set(opt).from(wrapper).outputPdf('blob')
-        .then(blob => {
-          const pdfFile = new File([blob], "oprosny_list.pdf", { type: "application/pdf" });
-          return fetch("https://transfer.sh/oprosny_list.pdf", {
+            const inputElement = document.createElement("input");
+            inputElement.type = "text";
+            inputElement.placeholder = "Элемент (напр. Fe)";
+            inputElement.name = `${containerId}_element[]`;
+            inputElement.className = "form-control";
+            inputElement.value = entry.element;
+            inputElement.oninput = () => saveDynamicValues(containerId);
+
+            const inputRange = document.createElement("input");
+            inputRange.type = "text";
+            inputRange.placeholder = "Диапазон концентрации";
+            inputRange.name = `${containerId}_range[]`;
+            inputRange.className = "form-control";
+            inputRange.value = entry.range;
+            inputRange.oninput = () => saveDynamicValues(containerId);
+
+            const removeBtn = document.createElement("button");
+            removeBtn.type = "button";
+            removeBtn.className = "btn btn-outline-danger btn-sm";
+            removeBtn.textContent = "Удалить";
+            removeBtn.onclick = () => {
+                wrapper.remove();
+                saveDynamicValues(containerId);
+            };
+
+            wrapper.appendChild(inputElement);
+            wrapper.appendChild(inputRange);
+            wrapper.appendChild(removeBtn);
+            container.appendChild(wrapper);
+        });
+    }
+
+    const containers = Array.from(document.querySelectorAll('div[id$="elements-ca-u"], div[id$="light-elements"]')).map(el => el.id);
+
+    function showAnalyzerSection(materialType) {
+        const sections = document.querySelectorAll('.analyzer-section');
+        sections.forEach(section => section.style.display = 'none');
+
+        const selectedSection = document.getElementById(`section-${materialType}`);
+        if (selectedSection) {
+            selectedSection.style.display = 'block';
+        }
+    }
+
+    function bindPhotoPreview(materialType) {
+        const input = document.getElementById(`installation_photo_${materialType}`);
+        const preview = document.getElementById(`installation_preview_${materialType}`);
+
+        if (!input || !preview) return;
+
+        input.addEventListener("change", (event) => {
+            const file = event.target.files[0];
+            if (file && file.type.startsWith("image/")) {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    preview.src = e.target.result;
+                    preview.style.display = "block";
+                    input.dataset.jpeg = e.target.result; // Сохраняем Data URL для PDF
+                };
+                reader.readAsDataURL(file);
+            } else {
+                preview.style.display = "none";
+                preview.src = "";
+                input.dataset.jpeg = ""; // Очищаем Data URL
+            }
+        });
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+        // Инициализация EmailJS
+        emailjs.init("lK76KGFPVwTGiY9vX"); // Убедитесь, что это ваш реальный Public Key
+
+        const materialSelect = document.getElementById("material");
+        if (materialSelect) {
+            materialSelect.addEventListener("change", () => {
+                showAnalyzerSection(materialSelect.value);
+                containers.forEach(restoreDynamicValues); // Восстанавливаем данные при смене типа материала
+            });
+            // Показываем секцию при загрузке страницы, если выбран материал
+            showAnalyzerSection(materialSelect.value);
+            containers.forEach(restoreDynamicValues);
+        }
+
+        // Привязываем превью изображений для каждой секции
+        ["pulp", "sinter", "multiplex", "courier"].forEach(bindPhotoPreview);
+
+        const submitBtn = document.getElementById("submit-button");
+        if (submitBtn) {
+            submitBtn.addEventListener("click", submitForm);
+        }
+    });
+
+    async function submitForm() {
+        const form = document.getElementById("form");
+        const emailInput = form.email;
+        const materialSelect = form.material;
+        const errorMessageDiv = document.getElementById("error-message");
+
+        // Сброс ошибок
+        errorMessageDiv.style.display = 'none';
+        errorMessageDiv.textContent = '';
+        emailInput.classList.remove('is-invalid');
+        materialSelect.classList.remove('is-invalid');
+
+        // Проверка обязательных полей
+        if (!emailInput.value) {
+            emailInput.classList.add('is-invalid');
+            errorMessageDiv.textContent = "Пожалуйста, введите Email.";
+            errorMessageDiv.style.display = 'block';
+            return;
+        }
+        if (!materialSelect.value) {
+            materialSelect.classList.add('is-invalid');
+            errorMessageDiv.textContent = "Пожалуйста, выберите тип анализируемого материала.";
+            errorMessageDiv.style.display = 'block';
+            return;
+        }
+
+        const email = emailInput.value;
+        const material = materialSelect.value;
+
+        let excelLink = "";
+        let pdfLink = "";
+
+        // --- СОХРАНЕНИЕ EXCEL ---
+        const dataRows = [];
+        const push = (label, val) => dataRows.push([label, val || "—"]);
+
+        push("Дата", form.date.value);
+        push("Компания", form.company.value);
+        push("Контактное лицо", form.contact_person.value);
+        push("Телефон", form.phone.value);
+        push("Email", form.email.value);
+        push("Страна", form.country.value);
+        push("Местонахождение", form.location.value);
+        push("Тип материала", form.material.value); // Изменено на "Тип материала"
+
+        const section = document.getElementById(`section-${material}`);
+        if (section) {
+            // Собираем данные из выбранной секции
+            section.querySelectorAll("input, select, textarea").forEach(input => {
+                if (input.type === "file") return; // Пропускаем file input, его обрабатываем отдельно
+                // Исключаем кнопки
+                if (input.tagName === 'BUTTON') return;
+
+                const labelElement = input.closest(".mb-3")?.querySelector("label") || input.closest(".form-check")?.querySelector("label");
+                const label = labelElement ? labelElement.textContent?.trim() : input.name; // Более надежный поиск лейбла
+                const value = input.type === "checkbox" ? (input.checked ? "Да" : "Нет") : input.value;
+                push(label, value);
+            });
+        }
+
+        // Собираем динамические элементы
+        // Обратите внимание, что containers определен глобально.
+        // Нужно обновить его, если новые контейнеры появятся.
+        const allDynamicContainers = Array.from(document.querySelectorAll('div[id$="elements-ca-u"], div[id$="light-elements"], div[id$="sinter-elements-ca-u"], div[id$="multiplex-elements-ca-u"], div[id$="multiplex-light-elements"], div[id$="courier-elements-ca-u"], div[id$="courier-light-elements"]')).map(el => el.id);
+
+        allDynamicContainers.forEach(id => {
+            saveDynamicValues(id); // Убедимся, что текущие значения сохранены
+            const dynamicElements = dynamicElementData[id];
+            if (dynamicElements && dynamicElements.length > 0) {
+                push(`--- Элементы из ${id} ---`, ""); // Разделитель
+                dynamicElements.forEach(entry => {
+                    push(`Элемент: ${entry.element || '—'}`, `Диапазон: ${entry.range || '—'}`);
+                });
+            }
+        });
+
+        const worksheet = XLSX.utils.aoa_to_sheet(dataRows);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Опросный лист");
+        const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+        const blobExcel = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+        const excelFile = new File([blobExcel], "oprosny_list.xlsx", { type: blobExcel.type });
+
+        try {
+            // Загрузка Excel файла
+            const excelRes = await fetch("https://transfer.sh/oprosny_list.xlsx", {
+                method: "PUT",
+                body: excelFile
+            });
+            if (!excelRes.ok) {
+                const errorText = await excelRes.text();
+                throw new Error(`Ошибка загрузки Excel на transfer.sh: ${excelRes.status} ${excelRes.statusText} - ${errorText}`);
+            }
+            excelLink = await excelRes.text();
+            excelLink = excelLink.trim(); // Удаляем лишние пробелы/переносы строк
+
+            // Генерация и загрузка PDF
+            pdfLink = await generatePDF(excelLink);
+
+            // Отправка письма через EmailJS
+            await emailjs.send("service_1rnpxea", "template_sk137ts", {
+                to: `science.techade@gmail.com`, // Email получателя
+                email: email, // Email отправителя (из формы)
+                company: form.company.value,
+                date: form.date.value,
+                contact_person: form.contact_person.value,
+                phone: form.phone.value,
+                country: form.country.value,
+                location: form.location.value,
+                material: material,
+                subject: `Новый опросный лист от ${form.company.value} (${form.date.value})`, // Более информативная тема
+                time: new Date().toLocaleString(),
+                pdf_link: pdfLink,
+                excel_link: excelLink
+            });
+
+            alert("Опросный лист успешно отправлен!");
+
+        } catch (err) {
+            console.error("Ошибка при отправке формы:", err); // Используем console.error для более заметного вывода
+            errorMessageDiv.textContent = `Ошибка: ${err.message || "Неизвестная ошибка."} Пожалуйста, попробуйте еще раз.`;
+            errorMessageDiv.style.display = 'block';
+        }
+    }
+
+    async function generatePDF(excelLink) {
+        const originalContent = document.getElementById("pdf-content");
+        const clone = originalContent.cloneNode(true);
+
+        // Убедимся, что отображается только нужная секция
+        clone.querySelectorAll(".analyzer-section").forEach(section => {
+            section.style.display = "none";
+        });
+        const material = document.getElementById("material").value;
+        const selected = clone.querySelector(`#section-${material}`);
+        if (selected) selected.style.display = "block";
+
+        // Заменяем поля ввода на простой текст для PDF
+        clone.querySelectorAll("input, select, textarea").forEach(el => {
+            // Пропускаем hidden input и file input
+            if (el.type === "hidden" || el.type === "file") return;
+            // Пропускаем кнопки (их нет в clone, но для безопасности)
+            if (el.tagName === 'BUTTON') return;
+
+            const div = document.createElement("div");
+            div.style.padding = "4px 8px";
+            div.style.border = "1px solid #ccc";
+            div.style.borderRadius = "3px";
+            div.style.minHeight = "20px";
+            div.style.marginBottom = "4px";
+            div.style.backgroundColor = "#f9f9f9";
+            div.style.fontSize = "13px";
+
+            if (el.type === "checkbox") {
+                div.textContent = el.checked ? "Да" : "Нет";
+                // Добавляем атрибут для стилей при печати, если нужен
+                el.closest(".form-check").querySelector("label").setAttribute("data-checked", el.checked ? "✔" : "✖");
+            } else if (el.tagName === "SELECT") {
+                div.textContent = el.options[el.selectedIndex]?.text || "—";
+            }
+            else {
+                div.textContent = el.value?.trim() || "—";
+            }
+            el.replaceWith(div);
+        });
+
+        // Встраиваем динамические элементы в клон для PDF
+        const allDynamicContainers = Array.from(document.querySelectorAll('div[id$="elements-ca-u"], div[id$="light-elements"], div[id$="sinter-elements-ca-u"], div[id$="multiplex-elements-ca-u"], div[id$="multiplex-light-elements"], div[id$="courier-elements-ca-u"], div[id$="courier-light-elements"]')).map(el => el.id);
+
+        allDynamicContainers.forEach(id => {
+            const originalBlock = document.getElementById(id); // Оригинальный блок
+            const cloneBlock = clone.querySelector(`#${id}`); // Клонированный блок
+            if (!originalBlock || !cloneBlock) return;
+
+            cloneBlock.innerHTML = ""; // Очищаем клонированный блок
+            // Используем сохраненные dynamicElementData
+            const dynamicElements = dynamicElementData[id];
+            if (dynamicElements) {
+                dynamicElements.forEach(entry => {
+                    const div = document.createElement("div");
+                    div.textContent = `${entry.element || "—"} — ${entry.range || "—"}`;
+                    div.style.marginBottom = "4px";
+                    cloneBlock.appendChild(div);
+                });
+            }
+        });
+
+        // Встраивание изображения в PDF
+        const photoInputId = `installation_photo_${material}`;
+        const photoInput = document.getElementById(photoInputId);
+        const jpegData = photoInput?.dataset?.jpeg; // Получаем Data URL из dataset
+        if (jpegData) {
+            const img = document.createElement("img");
+            img.src = jpegData;
+            img.style.maxWidth = "100%";
+            img.style.marginTop = "10px";
+            img.style.pageBreakInside = 'avoid'; // Попытка избежать разрыва изображения
+            // Добавляем изображение в конец активной секции или в основное содержимое
+            if (selected) {
+                selected.appendChild(img);
+            } else {
+                clone.appendChild(img);
+            }
+        }
+
+        // Создаем временный элемент-обертку для html2pdf
+        const wrapper = document.createElement("div");
+        wrapper.style.cssText = "position: absolute; top: -9999px; left: -9999px; width: 210mm; padding: 20px; background: white; opacity: 0; z-index: -1;"; // Скрываем и убираем из видимой области
+        wrapper.appendChild(clone);
+        document.body.appendChild(wrapper);
+
+        const opt = {
+            filename: 'oprosny_list.pdf',
+            html2canvas: { scale: 2, useCORS: true },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        };
+
+        let pdfBlob;
+        try {
+            // Ждем завершения генерации PDF
+            pdfBlob = await html2pdf().set(opt).from(wrapper).outputPdf('blob');
+        } finally {
+            // Удаляем временный элемент после генерации PDF
+            if (document.body.contains(wrapper)) {
+                document.body.removeChild(wrapper);
+            }
+        }
+
+        // Загрузка PDF файла на transfer.sh
+        const pdfFile = new File([pdfBlob], "oprosny_list.pdf", { type: "application/pdf" });
+        const pdfRes = await fetch("https://transfer.sh/oprosny_list.pdf", {
             method: "PUT",
             body: pdfFile
-          });
-        })
-        .then(async res => {
-          if (!res.ok) throw new Error("Ошибка загрузки PDF на transfer.sh");
-          pdfLink = await res.text();
-          document.body.removeChild(wrapper);
-          return emailjs.send("service_1rnpxea", "template_sk137ts", {
-            to: `science.techade@gmail.com`,
-            email,
-            company: form.company.value,
-            date: form.date.value,
-            contact_person: form.contact_person.value,
-            phone: form.phone.value,
-            country: form.country.value,
-            location: form.location.value,
-            material,
-            subject: "Опросный лист (PDF + Excel)",
-            time: new Date().toLocaleString(),
-            pdf_link: pdfLink.trim(),
-            excel_link: excelLink.trim()
-          });
-        })
-        .then(() => alert("Excel и PDF успешно сохранены и отправлены."))
-        .catch(err => {
-          console.error("Ошибка PDF:", err);
-          alert("Ошибка при отправке PDF: " + (err.message || err));
         });
-    }, 300);
-  }
-}
+
+        if (!pdfRes.ok) {
+            const errorText = await pdfRes.text();
+            throw new Error(`Ошибка загрузки PDF на transfer.sh: ${pdfRes.status} ${pdfRes.statusText} - ${errorText}`);
+        }
+
+        return (await pdfRes.text()).trim(); // Возвращаем ссылку на PDF
+    }
 
 
+    function addElementRow(containerId) {
+        const container = document.getElementById(containerId);
+        const wrapper = document.createElement("div");
+        wrapper.className = "element-row";
 
-function addElementRow(containerId) {
-  const container = document.getElementById(containerId);
-  const wrapper = document.createElement("div");
-  wrapper.className = "element-row";
+        const inputElement = document.createElement("input");
+        inputElement.type = "text";
+        inputElement.placeholder = "Элемент (напр. Fe)";
+        inputElement.name = `${containerId}_element[]`;
+        inputElement.className = "form-control";
+        inputElement.oninput = () => saveDynamicValues(containerId);
 
-  const inputElement = document.createElement("input");
-  inputElement.type = "text";
-  inputElement.placeholder = "Элемент (напр. Fe)";
-  inputElement.name = `${containerId}_element[]`;
-  inputElement.className = "form-control";
-  inputElement.oninput = () => saveDynamicValues(containerId);
+        const inputRange = document.createElement("input");
+        inputRange.type = "text";
+        inputRange.placeholder = "Диапазон концентрации";
+        inputRange.name = `${containerId}_range[]`;
+        inputRange.className = "form-control";
+        inputRange.oninput = () => saveDynamicValues(containerId);
 
-  const inputRange = document.createElement("input");
-  inputRange.type = "text";
-  inputRange.placeholder = "Диапазон концентрации";
-  inputRange.name = `${containerId}_range[]`;
-  inputRange.className = "form-control";
-  inputRange.oninput = () => saveDynamicValues(containerId);
+        const removeBtn = document.createElement("button");
+        removeBtn.type = "button";
+        removeBtn.className = "btn btn-outline-danger btn-sm";
+        removeBtn.textContent = "Удалить";
+        removeBtn.onclick = () => {
+            wrapper.remove();
+            saveDynamicValues(containerId);
+        };
 
-  const removeBtn = document.createElement("button");
-  removeBtn.type = "button";
-  removeBtn.className = "btn btn-outline-danger btn-sm";
-  removeBtn.textContent = "Удалить";
-  removeBtn.onclick = () => {
-    wrapper.remove();
-    saveDynamicValues(containerId);
-  };
+        wrapper.appendChild(inputElement);
+        wrapper.appendChild(inputRange);
+        wrapper.appendChild(removeBtn);
+        container.appendChild(wrapper);
 
-  wrapper.appendChild(inputElement);
-  wrapper.appendChild(inputRange);
-  wrapper.appendChild(removeBtn);
-  container.appendChild(wrapper);
+        saveDynamicValues(containerId);
+    }
 
-  saveDynamicValues(containerId);
-}
-
-window.addElementRow = addElementRow;
+    // Делаем функцию доступной глобально
+    window.addElementRow = addElementRow;
 </script>
-
-
-
-
-
 
 </body>
 </html>
