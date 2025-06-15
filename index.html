@@ -417,6 +417,8 @@
 
     
 <!-- Подключение EmailJS и html2pdf -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
 
 <script>
@@ -542,20 +544,85 @@ function submitForm() {
   const material = form.material.value;
   if (!email) return alert("Введите email");
 
-  // Создаем клон только контента, без формы
+  // --- СОХРАНЕНИЕ EXCEL ---
+  const dataRows = [];
+  const push = (label, val) => dataRows.push([label, val || "—"]);
+
+  push("Дата", form.date.value);
+  push("Компания", form.company.value);
+  push("Контактное лицо", form.contact_person.value);
+  push("Телефон", form.phone.value);
+  push("Email", form.email.value);
+  push("Страна", form.country.value);
+  push("Местонахождение", form.location.value);
+  push("Материал", form.material.value);
+
+  const section = document.getElementById(`section-${material}`);
+  if (section) {
+    section.querySelectorAll("input, select, textarea").forEach(input => {
+      if (input.type === "file") return;
+      const label = input.closest(".mb-3")?.querySelector("label")?.textContent?.trim() || input.name;
+      const value = input.type === "checkbox" ? (input.checked ? "Да" : "Нет") : input.value;
+      push(label, value);
+    });
+  }
+
+  containers.forEach(id => {
+    saveDynamicValues(id);
+    dynamicElementData[id].forEach(entry => {
+      push(`Элемент: ${entry.element}`, `Диапазон: ${entry.range}`);
+    });
+  });
+
+  const worksheet = XLSX.utils.aoa_to_sheet(dataRows);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Опросный лист");
+  const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+  const blobExcel = new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+
+  // Отправка Excel на сервер и на почту
+  const excelFile = new File([blobExcel], "oprosny_list.xlsx", { type: blobExcel.type });
+  const excelFormData = new FormData();
+  excelFormData.append("file", excelFile);
+
+  fetch("https://tmpfiles.org/api/v1/upload", {
+    method: "POST",
+    body: excelFormData
+  })
+  .then(res => res.json())
+  .then(data => {
+    const excelLink = data?.data?.url;
+    if (!excelLink) throw new Error("Не удалось загрузить Excel-файл");
+
+    return emailjs.send("service_1rnpxea", "template_sk137ts", {
+      to: `science.techade@gmail.com`,
+      email,
+      company: form.company.value,
+      date: form.date.value,
+      contact_person: form.contact_person.value,
+      phone: form.phone.value,
+      country: form.country.value,
+      location: form.location.value,
+      material,
+      subject: "Опросный лист (Excel)",
+      time: new Date().toLocaleString(),
+      pdf_link: excelLink
+    });
+  })
+  .then(() => console.log("Excel отправлен"))
+  .catch(err => console.error("Ошибка Excel:", err));
+
+  // --- СОХРАНЕНИЕ PDF ---
   const originalContent = document.getElementById("pdf-content");
   const clone = originalContent.cloneNode(true);
 
-  // Показываем только активную секцию материала
   clone.querySelectorAll(".analyzer-section").forEach(section => {
     section.style.display = "none";
   });
   const selected = clone.querySelector(`#section-${material}`);
   if (selected) selected.style.display = "block";
 
-  // Обновляем динамические блоки
   containers.forEach(id => {
-    saveDynamicValues(id);
     const originalBlock = document.getElementById(id);
     const cloneBlock = clone.querySelector(`#${id}`);
     if (!originalBlock || !cloneBlock) return;
@@ -568,7 +635,6 @@ function submitForm() {
     });
   });
 
-  // Заменяем все input/select/textarea на текст
   clone.querySelectorAll("input, select, textarea").forEach(el => {
     const div = document.createElement("div");
     div.style.padding = "4px 8px";
@@ -582,10 +648,8 @@ function submitForm() {
     el.replaceWith(div);
   });
 
-  // Удаляем кнопки
   clone.querySelectorAll("button").forEach(btn => btn.remove());
 
-  // Добавляем фото если есть
   const photoInput = document.getElementById(`installation_photo_${material}`);
   const jpegData = photoInput?.dataset?.jpeg;
   if (jpegData) {
@@ -596,12 +660,10 @@ function submitForm() {
     clone.appendChild(img);
   }
 
-  // Создаем обертку без создания пустой страницы
-  const hiddenWrapper = document.createElement("div");
-  hiddenWrapper.style.cssText = "position: absolute; top: 0; left: 0; width: 210mm; background: #fff; padding: 10px; opacity: 0;";
-  hiddenWrapper.style.minHeight = "297mm";
-  hiddenWrapper.appendChild(clone);
-  document.body.appendChild(hiddenWrapper);
+  const wrapper = document.createElement("div");
+  wrapper.style.cssText = "position: fixed; top: 0; left: 0; z-index: 9999; width: 210mm; padding: 20px; background: white; opacity: 1;";
+  wrapper.appendChild(clone);
+  document.body.appendChild(wrapper);
 
   const opt = {
     filename: 'oprosny_list.pdf',
@@ -610,42 +672,12 @@ function submitForm() {
     pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
   };
 
-  html2pdf().set(opt).from(hiddenWrapper).outputPdf('blob')
-    .then(blob => {
-      html2pdf().set(opt).from(hiddenWrapper).save();
-      document.body.removeChild(hiddenWrapper);
-
-      const file = new File([blob], "oprosny_list.pdf", { type: "application/pdf" });
-      const formData = new FormData();
-      formData.append("file", file);
-      return fetch("https://tmpfiles.org/api/v1/upload", {
-        method: "POST",
-        body: formData
-      });
-    })
-    .then(res => res.json())
-    .then(data => {
-      if (!data?.data?.url) throw new Error("Не удалось получить ссылку на PDF");
-      return emailjs.send("service_1rnpxea", "template_sk137ts", {
-        to: `${email}, science.techade@gmail.com`,
-        email,
-        company: form.company.value,
-        date: form.date.value,
-        contact_person: form.contact_person.value,
-        phone: form.phone.value,
-        country: form.country.value,
-        location: form.location.value,
-        material,
-        subject: "Новый опросный лист",
-        time: new Date().toLocaleString(),
-        pdf_link: data.data.url
-      });
-    })
-    .then(() => alert("PDF сохранён и отправлен по email."))
-    .catch(err => {
-      console.error("Ошибка при отправке:", err);
-      alert("Ошибка: " + (err.message || err));
+  setTimeout(() => {
+    html2pdf().set(opt).from(wrapper).save().then(() => {
+      document.body.removeChild(wrapper);
+      alert("Excel и PDF успешно сохранены и отправлены.");
     });
+  }, 300);
 }
 
 
