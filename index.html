@@ -480,6 +480,16 @@ function restoreDynamicValues(containerId) {
 // ВСТАВКА: автоматическое определение контейнеров и восстановление значений
 const containers = Array.from(document.querySelectorAll('div[id$="elements-ca-u"], div[id$="light-elements"], div[id$="sinter-elements-ca-u"], div[id$="multiplex-elements-ca-u"], div[id$="multiplex-light-elements"], div[id$="courier-elements-ca-u"], div[id$="courier-light-elements"]')).map(el => el.id);
 
+  function showAnalyzerSection(materialType) {
+  const sections = document.querySelectorAll('.analyzer-section');
+  sections.forEach(section => section.style.display = 'none');
+
+  const selectedSection = document.getElementById(`section-${materialType}`);
+  if (selectedSection) {
+    selectedSection.style.display = 'block';
+  }
+}
+  
 document.addEventListener("DOMContentLoaded", function () {
   emailjs.init("lK76KGFPVwTGiY9vX");
 
