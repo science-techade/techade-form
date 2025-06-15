@@ -551,7 +551,10 @@ function submitForm() {
     section.style.display = "none";
   });
   const selected = clone.querySelector(`#section-${material}`);
-  if (selected) selected.style.display = "block";
+  if (selected) {
+    selected.style.display = "block";
+    selected.classList.remove("analyzer-section"); // важно, чтобы display: none не применялся
+  }
 
   // Обновляем динамические блоки
   containers.forEach(id => {
@@ -646,6 +649,7 @@ function submitForm() {
       alert("Ошибка: " + (err.message || err));
     });
 }
+
 
 
 function addElementRow(containerId) {
