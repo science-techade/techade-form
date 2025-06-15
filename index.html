@@ -542,33 +542,34 @@ function submitForm() {
   const material = form.material.value;
   if (!email) return alert("Введите email");
 
-  // Подготавливаем контейнер для PDF (используем только #pdf-content)
-  const contentToExport = document.getElementById("pdf-content").cloneNode(true);
+  // Создаем клон только контента, без формы
+  const originalContent = document.getElementById("pdf-content");
+  const clone = originalContent.cloneNode(true);
 
-  // Показываем только выбранный блок анализа
-  contentToExport.querySelectorAll(".analyzer-section").forEach(section => {
+  // Показываем только активную секцию материала
+  clone.querySelectorAll(".analyzer-section").forEach(section => {
     section.style.display = "none";
   });
-  const selectedSection = contentToExport.querySelector(`#section-${material}`);
-  if (selectedSection) selectedSection.style.display = "block";
+  const selected = clone.querySelector(`#section-${material}`);
+  if (selected) selected.style.display = "block";
 
-  // Обновляем динамические данные
+  // Обновляем динамические блоки
   containers.forEach(id => {
     saveDynamicValues(id);
-    const original = document.getElementById(id);
-    const cloned = contentToExport.querySelector(`#${id}`);
-    if (!original || !cloned) return;
-    cloned.innerHTML = "";
+    const originalBlock = document.getElementById(id);
+    const cloneBlock = clone.querySelector(`#${id}`);
+    if (!originalBlock || !cloneBlock) return;
+    cloneBlock.innerHTML = "";
     dynamicElementData[id].forEach(entry => {
       const div = document.createElement("div");
       div.textContent = `${entry.element || "—"} — ${entry.range || "—"}`;
       div.style.marginBottom = "4px";
-      cloned.appendChild(div);
+      cloneBlock.appendChild(div);
     });
   });
 
-  // Заменяем поля ввода на стилизованный текст
-  contentToExport.querySelectorAll("input, select, textarea").forEach(el => {
+  // Заменяем все input/select/textarea на текст
+  clone.querySelectorAll("input, select, textarea").forEach(el => {
     const div = document.createElement("div");
     div.style.padding = "4px 8px";
     div.style.border = "1px solid #ccc";
@@ -577,18 +578,14 @@ function submitForm() {
     div.style.marginBottom = "4px";
     div.style.backgroundColor = "#f9f9f9";
     div.style.fontSize = "13px";
-    if (el.type === "checkbox") {
-      div.textContent = el.checked ? "✔ Да" : "— Нет";
-    } else {
-      div.textContent = el.value?.trim() || "—";
-    }
+    div.textContent = el.type === "checkbox" ? (el.checked ? "✔ Да" : "— Нет") : (el.value?.trim() || "—");
     el.replaceWith(div);
   });
 
   // Удаляем кнопки
-  contentToExport.querySelectorAll("button").forEach(btn => btn.remove());
+  clone.querySelectorAll("button").forEach(btn => btn.remove());
 
-  // Добавляем изображение если есть
+  // Добавляем фото если есть
   const photoInput = document.getElementById(`installation_photo_${material}`);
   const jpegData = photoInput?.dataset?.jpeg;
   if (jpegData) {
@@ -596,19 +593,14 @@ function submitForm() {
     img.src = jpegData;
     img.style.maxWidth = "100%";
     img.style.marginTop = "10px";
-    contentToExport.appendChild(img);
+    clone.appendChild(img);
   }
 
-  // Обертка вне экрана для печати
-  const tempContainer = document.createElement("div");
-  tempContainer.style.position = "fixed";
-  tempContainer.style.left = "0";
-  tempContainer.style.top = "0";
-  tempContainer.style.opacity = "0";
-  tempContainer.style.pointerEvents = "none";
-  tempContainer.style.zIndex = "-1";
-  tempContainer.appendChild(contentToExport);
-  document.body.appendChild(tempContainer);
+  // Создаем обертку без создания пустой страницы
+  const hiddenWrapper = document.createElement("div");
+  hiddenWrapper.style.cssText = "position: absolute; top: 0; left: 0; visibility: hidden; z-index: -1;";
+  hiddenWrapper.appendChild(clone);
+  document.body.appendChild(hiddenWrapper);
 
   const opt = {
     filename: 'oprosny_list.pdf',
@@ -617,10 +609,10 @@ function submitForm() {
     pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
   };
 
-  html2pdf().set(opt).from(contentToExport).outputPdf('blob')
+  html2pdf().set(opt).from(clone).outputPdf('blob')
     .then(blob => {
-      html2pdf().set(opt).from(contentToExport).save();
-      document.body.removeChild(tempContainer);
+      html2pdf().set(opt).from(clone).save();
+      document.body.removeChild(hiddenWrapper);
 
       const file = new File([blob], "oprosny_list.pdf", { type: "application/pdf" });
       const formData = new FormData();
@@ -654,6 +646,7 @@ function submitForm() {
       alert("Ошибка: " + (err.message || err));
     });
 }
+
 
 function addElementRow(containerId) {
   const container = document.getElementById(containerId);
