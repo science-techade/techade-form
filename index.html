@@ -67,7 +67,7 @@
                     <input type="text" id="company" name="company" class="form-control" required>
                 </div>
                 <div class="mb-3">
-                    <label for="contact_person" class="form-label">Контактное лицо</label>
+                    <label for="contact_person" class="form-label">Контактное лицо</</label>
                     <input type="text" id="contact_person" name="contact_person" class="form-control">
                 </div>
                 <div class="mb-3">
@@ -744,14 +744,13 @@
         let excelBlob;
 
         try {
-            excelBlob = generateExcelBlob();
-            pdfBlob = await generatePDFBlob();
+            // NOTE: Temporarily removed attachment generation and sending for debugging purposes.
+            // Uncomment the lines below to re-enable PDF and Excel attachments after the core email sending works.
+            // excelBlob = generateExcelBlob();
+            // pdfBlob = await generatePDFBlob();
+            // const pdfBase64 = await blobToBase64(pdfBlob);
+            // const excelBase64 = await blobToBase64(excelBlob);
 
-            const pdfBase64 = await blobToBase64(pdfBlob);
-            const excelBase64 = await blobToBase64(excelBlob);
-
-            // Публичный ключ EmailJS, который вы используете
-            // ИЗМЕНЕНО: Исправлен ключ на тот, что вы указали (латинская 'l')
             const emailJsPublicKey = "2p7l9sK9Zfj6c2SXi"; 
             const serviceID = "service_1rnpxea";
             const templateID = "template_sk137ts";
@@ -775,18 +774,19 @@
                 template_id: templateID,
                 user_id: emailJsPublicKey,
                 template_params: templateParams,
-                attachment: [
-                    {
-                        name: "Опросный лист.pdf",
-                        data: pdfBase64,
-                        type: "application/pdf"
-                    },
-                    {
-                        name: "Опросный лист.xlsx",
-                        data: excelBase64,
-                        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    }
-                ]
+                // NOTE: Attachment sending is temporarily disabled.
+                // attachment: [
+                //     {
+                //         name: "Опросный лист.pdf",
+                //         data: pdfBase64,
+                //         type: "application/pdf"
+                //     },
+                //     {
+                //         name: "Опросный лист.xlsx",
+                //         data: excelBase64,
+                //         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                //     }
+                // ]
             };
 
             const response = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
