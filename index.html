@@ -769,7 +769,7 @@
             // --- КОНВЕРТИРУЕМ BLOB'Ы В BASE64 ---
             const pdfBase64 = await blobToBase64(pdfBlob);
             const excelBase64 = await blobToBase64(excelBlob);
-
+            console.log("DEBUG: Public ID перед отправкой:", emailjs.getPublicId());
             // Отправка письма через EmailJS с ВЛОЖЕНИЯМИ
             await emailjs.send("service_1rnpxea", "template_sk137ts", {
                 to: `science.techade@gmail.com`, // Email получателя
