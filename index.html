@@ -555,7 +555,10 @@
 
         const submitBtn = document.getElementById("submit-button");
         if (submitBtn) {
-            submitBtn.addEventListener("click", submitForm);
+            submitBtn.addEventListener("click", async (event) => { // Добавляем async, так как submitForm асинхронная
+                event.preventDefault(); // Предотвращаем стандартную отправку формы
+                await submitForm(); // Явно вызываем вашу функцию submitForm
+            });
         }
     });
 
