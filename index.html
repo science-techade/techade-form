@@ -783,18 +783,18 @@
                 // Они больше не нужны, так как отправляем вложениями
             }, {
                 // Добавляем вложения через опции EmailJS
-                attachments: [
-                    {
-                        name: "Опросный лист.pdf", // Имя файла, которое будет видно получателю
-                        data: pdfBase64,
-                        type: "application/pdf"
-                    },
-                    {
-                        name: "Опросный лист.xlsx", // Имя файла, которое будет видно получателю
-                        data: excelBase64,
-                        type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                    }
-                ]
+             //   attachments: [
+             //       {
+             //           name: "Опросный лист.pdf", // Имя файла, которое будет видно получателю
+             //           data: pdfBase64,
+             //           type: "application/pdf"
+             //       },
+             //       {
+             //           name: "Опросный лист.xlsx", // Имя файла, которое будет видно получателю
+             //           data: excelBase64,
+             //           type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+             //       }
+             //   ]
             });
 
             alert("Опросный лист успешно отправлен!");
