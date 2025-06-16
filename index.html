@@ -739,17 +739,11 @@
         emailInput.classList.remove('is-invalid');
         materialSelect.classList.remove('is-invalid');
 
-        // Проверка обязательных полей
-        if (!emailInput.value) {
-            emailInput.classList.add('is-invalid');
-            errorMessageDiv.textContent = "Пожалуйста, введите Email.";
+        // Проверка обязательных полей HTML5
+        if (!form.checkValidity()) {
+            errorMessageDiv.textContent = "Пожалуйста, заполните все обязательные поля формы.";
             errorMessageDiv.style.display = 'block';
-            return;
-        }
-        if (!materialSelect.value) {
-            materialSelect.classList.add('is-invalid');
-            errorMessageDiv.textContent = "Пожалуйста, выберите тип анализируемого материала.";
-            errorMessageDiv.style.display = 'block';
+            form.reportValidity(); // Показать стандартные ошибки валидации браузера
             return;
         }
 
@@ -780,15 +774,17 @@
             const templateParams = {
                 to: `science.techade@gmail.com`, // Email получателя
                 email: email, // Email отправителя (из формы)
-                company: form.company.value || 'Не указано', // Добавлено значение по умолчанию
-                date: form.date.value || 'Не указано',       // Добавлено значение по умолчанию
-                contact_person: form.contact_person.value || 'Не указано', // Добавлено значение по умолчанию
-                phone: form.phone.value || 'Не указано',     // Добавлено значение по умолчанию
-                country: form.country.value || 'Не указано', // Добавлено значение по умолчанию
-                location: form.location.value || 'Не указано', // Добавлено значение по умолчанию
+                // Отправляем только те параметры, которые точно нужны для минимального теста
+                // После успешной отправки можно будет добавлять остальные
+                company: form.company.value, 
+                date: form.date.value,
                 material: material,
-                // Сделаем subject более устойчивым к пустым полям
                 subject: `Опросный лист от ${form.company.value || 'Неизвестной компании'} (${form.date.value || 'Неизвестной даты'})`,
+                // Телефон без форматирования
+                phone: form.phone.value ? form.phone.value.replace(/\D/g, '') : '', // Очищаем от всех нецифровых символов
+                contact_person: form.contact_person.value || '',
+                country: form.country.value || '',
+                location: form.location.value || '',
                 time: new Date().toLocaleString(),
             };
 
