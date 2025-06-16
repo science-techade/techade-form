@@ -782,20 +782,21 @@
             const templateParams = {
                 to: `science.techade@gmail.com`, // Email получателя
                 email: email, // Email отправителя (из формы)
-                company: form.company.value || 'Не указано', // Добавлено значение по умолчанию
-                date: form.date.value || 'Не указано',       // Добавлено значение по умолчанию
-                contact_person: form.contact_person.value || 'Не указано', // Добавлено значение по умолчанию
-                phone: form.phone.value ? form.phone.value.replace(/\D/g, '') : 'Не указано', // Очищаем от всех нецифровых символов, добавлено значение по умолчанию
-                country: form.country.value || 'Не указано', // Добавлено значение по умолчанию
-                location: form.location.value || 'Не указано', // Добавлено значение по умолчанию
+                company: form.company.value || 'Не указано', // Гарантируем непустое значение
+                date: form.date.value || 'Не указано',       // Гарантируем непустое значение
+                contact_person: form.contact_person.value || 'Не указано', 
+                phone: form.phone.value ? form.phone.value.replace(/\D/g, '') : 'Не указано', 
+                country: form.country.value || 'Не указано', 
+                location: form.location.value || 'Не указано', 
                 material: material,
-                subject: `Опросный лист от ${form.company.value || 'Неизвестной компании'} (${form.date.value || 'Неизвестной даты'})`,
+                subject: `Тестовый опросный лист (отладка)`, // Временно статический subject
                 time: new Date().toLocaleString(),
             };
 
             // !!! ВРЕМЕННЫЙ ЛОГ для отладки: Проверьте консоль браузера перед отправкой !!!
             console.log("Отправляемые template_params:", templateParams);
-            // alert("Отправляемые template_params:\n" + JSON.stringify(templateParams, null, 2));
+            console.log("PDF Base64 (начало):", pdfBase64 ? pdfBase64.substring(0, 100) + "..." : "N/A"); // Логируем начало строки
+            console.log("Excel Base64 (начало):", excelBase64 ? excelBase64.substring(0, 100) + "..." : "N/A"); // Логируем начало строки
 
 
             // Тело запроса для EmailJS API
