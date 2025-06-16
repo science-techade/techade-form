@@ -12,7 +12,7 @@
         .element-row { display: flex; gap: 10px; margin-bottom: 10px; }
         .element-row input { flex: 1; }
         .element-row button { white-space: nowrap; }
-        .analyzer-section, .conditional-block { display: none; margin-top: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 5px; background-color: #f9f9f9; }
+        .analyzer-section, .conditional-block { display: none; margin-top: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 5-px; background-color: #f9f9f9; }
         /* Стили для обязательных полей */
         .required-field::after {
             content: " *";
@@ -20,7 +20,7 @@
         }
         /* Стили для PDF - скрываем элементы управления, которые не нужны в PDF */
         @media print {
-            .btn, .form-control[type="file"], .attachment-checkbox { /* Добавлено .attachment-checkbox для скрытия чекбоксов в PDF */
+            .btn, .form-control[type="file"], .attachment-checkbox { /* Добавлено .attachment-checkbox для скрытия чекбокс-ов в PDF */
                 display: none !important;
             }
             /* Убедимся, что поля формы правильно отображаются в PDF */
@@ -588,7 +588,10 @@
                 const base64String = reader.result.split(',')[1];
                 resolve(base64String);
             };
-            reader.onerror = reject;
+            reader.onerror = (error) => { // Added error handling for FileReader
+                console.error("FileReader error:", error);
+                reject(error);
+            };
             reader.readAsDataURL(blob);
         });
     }
@@ -836,30 +839,25 @@
             if (sendPdfCheckbox.checked) {
                 const pdfBlob = await generatePDFBlob();
                 pdfBase64 = await blobToBase64(pdfBlob);
-                // attachments.push({ // Эти вложения будут отправлены через Apps Script, не через EmailJS
-                //     name: "Опросный лист.pdf",
-                //     data: pdfBase64,
-                //     type: "application/pdf"
-                // });
                 console.log("PDF Base64 generated. Length:", pdfBase64 ? pdfBase64.length : 0);
+                if (!pdfBase64 || pdfBase64.length < 100) { // Простая проверка на минимальную длину
+                    console.error("Сгенерированный PDF Base64 кажется слишком коротким или пустым.");
+                    // Можно также добавить сообщение на UI, если это критично:
+                    // errorMessageDiv.textContent = "Ошибка генерации PDF: файл слишком мал или пуст.";
+                    // errorMessageDiv.style.display = 'block';
+                }
             }
 
             if (sendExcelCheckbox.checked) {
                 const excelBlob = generateExcelBlob();
                 excelBase64 = await blobToBase64(excelBlob);
-                // attachments.push({ // Эти вложения будут отправлены через Apps Script, не через EmailJS
-                //     name: "Опросный лист.xlsx",
-                //     data: excelBase64,
-                //     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                // });
                 console.log("Excel Base64 generated. Length:", excelBase64 ? excelBase64.length : 0);
+                 if (!excelBase64 || excelBase64.length < 100) { // Простая проверка на минимальную длину
+                    console.error("Сгенерированный Excel Base64 кажется слишком коротким или пустым.");
+                    // Можно также добавить сообщение на UI
+                }
             }
-
-            // --- Отправка в EmailJS (УДАЛЕНО) ---
-            // Вся логика EmailJS была удалена, так как она вызывала проблемы с вложениями
-            // и Google Apps Script теперь полностью выполняет эту задачу.
-
-
+            
             // --- Отправка в Google Sheet ---
             // Собираем все данные для Google Sheet.
             const googleSheetPayload = {
