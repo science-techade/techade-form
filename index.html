@@ -537,7 +537,7 @@
 
     document.addEventListener("DOMContentLoaded", function () {
         // Инициализация EmailJS
-        emailjs.init("kZUhMuB8JelLwCXBt"); 
+        emailjs.init("j3_jznqK0lyaaXc1e"); 
 
         const materialSelect = document.getElementById("material");
         if (materialSelect) {
@@ -767,7 +767,7 @@
             const excelBase64 = await blobToBase64(excelBlob);
 
             // Отправка письма через EmailJS с ВЛОЖЕНИЯМИ
-            await emailjs.send("service_aa7jb5v", "template_27eynff", {
+            await emailjs.send("service_1rnpxea", "template_sk137ts", {
                 to: `science.techade@gmail.com`, // Email получателя
                 email: email, // Email отправителя (из формы)
                 company: form.company.value,
@@ -777,10 +777,9 @@
                 country: form.country.value,
                 location: form.location.value,
                 material: material,
-                subject: `Новый опросный лист от ${form.company.value} (${form.date.value})`, // Более информативная тема
+                subject: `Новый опросный лист от ${form.company.value} (${form.date.value})`, 
                 time: new Date().toLocaleString(),
-                // Убираем pdf_link и excel_link из параметров шаблона
-                // Они больше не нужны, так как отправляем вложениями
+
             }, {
                 // Добавляем вложения через опции EmailJS
                 attachments: [
