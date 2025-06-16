@@ -772,7 +772,7 @@
             const excelBase64 = await blobToBase64(excelBlob);
 
             // Публичный ключ EmailJS, который вы используете
-            const emailJsPublicKey = "2p7l9sK9Zfj6c2SXi"; 
+            const emailJsPublicKey = "2p7l9sK9Zfj6c25X1"; // Исправленный ключ
             const serviceID = "service_1rnpxea";
             const templateID = "template_sk137ts";
 
@@ -795,9 +795,9 @@
             const requestBody = {
                 service_id: serviceID,
                 template_id: templateID,
-                user_id: emailJsPublicKey, // Изменено обратно на user_id
+                user_id: emailJsPublicKey, // Имя поля user_id
                 template_params: templateParams,
-                attachments: [ // Вложения
+                attachment: [ // Вложения: изменено с attachments на attachment (единственное число)
                     {
                         name: "Опросный лист.pdf",
                         data: pdfBase64,
