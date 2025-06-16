@@ -462,6 +462,10 @@
 </div>
 
 <script>
+    // URL для вашего Google Apps Script Web App.
+    // Замените этот placeholder на фактический URL после развертывания скрипта.
+    const GOOGLE_SHEET_WEB_APP_URL = 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE'; // Замените на ваш URL
+
     const dynamicElementData = {};
 
     function saveDynamicValues(containerId) {
@@ -731,6 +735,43 @@
         return pdfBlob;
     }
 
+    async function sendToGoogleSheet(formData, pdfBase64, excelBase64, installationPhotoDataUrl) {
+        if (!GOOGLE_SHEET_WEB_APP_URL || GOOGLE_SHEET_WEB_APP_URL === 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE') {
+            console.error("GOOGLE_SHEET_WEB_APP_URL не установлен. Отправка в Google Sheet пропущена.");
+            return;
+        }
+
+        const payload = {
+            ...formData,
+            pdf_attachment_base64: pdfBase64 || '', // Add PDF Base64
+            excel_attachment_base64: excelBase64 || '', // Add Excel Base64
+            installation_photo_base64: installationPhotoDataUrl || '' // Add photo Base64
+        };
+
+        try {
+            console.log("Отправка данных в Google Sheet:", payload);
+            const response = await fetch(GOOGLE_SHEET_WEB_APP_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+                mode: 'no-cors' // Важно для CORS при отправке на Google Apps Script
+            });
+
+            // Поскольку mode: 'no-cors', response.ok всегда будет true, а status - 0.
+            // Проверка успеха должна быть сделана на стороне Apps Script.
+            // Для отладки в браузере, можно ориентироваться на отсутствие ошибок сети.
+            console.log("Запрос в Google Sheet отправлен. Ответ (может быть пустым из-за no-cors mode):", response);
+            alert("Данные также отправлены в Google Таблицу!");
+
+        } catch (error) {
+            console.error("Ошибка при отправке в Google Sheet:", error);
+            // alert("Ошибка при отправке в Google Таблицу. Проверьте консоль.");
+            // Не выводим alert, так как это может быть ложное срабатывание из-за no-cors
+        }
+    }
+
     async function submitForm() {
         const form = document.getElementById("form");
         const emailInput = form.email;
@@ -756,10 +797,33 @@
 
         let pdfBase64 = null;
         let excelBase64 = null;
-        let attachments = [];
-        let installationPhotoDataUrl = null; // Variable to store the photo data URL
+        let installationPhotoDataUrl = null; 
+        let emailJsAttachments = [];
+        let formDataForGoogleSheet = {};
 
         try {
+            // Collect general form data
+            const formElements = form.elements;
+            for (let i = 0; i < formElements.length; i++) {
+                const element = formElements[i];
+                if (element.name && element.type !== 'file' && element.tagName !== 'BUTTON' && element.type !== 'checkbox' && element.type !== 'hidden') {
+                    formDataForGoogleSheet[element.name] = element.value;
+                } else if (element.type === 'checkbox' && element.name) {
+                    formDataForGoogleSheet[element.name] = element.checked;
+                }
+            }
+
+            // Get dynamic elements data
+            const allDynamicContainers = Array.from(document.querySelectorAll('div[id$="elements-ca-u"], div[id$="light-elements"], div[id$="sinter-elements-ca-u"], div[id$="multiplex-elements-ca-u"], div[id$="multiplex-light-elements"], div[id$="courier-elements-ca-u"], div[id$="courier-light-elements"]')).map(el => el.id);
+            allDynamicContainers.forEach(id => {
+                saveDynamicValues(id); // Ensure latest dynamic values are saved
+                const dynamicElements = dynamicElementData[id];
+                if (dynamicElements && dynamicElements.length > 0) {
+                    // Store as stringified JSON to save in one cell in Google Sheet
+                    formDataForGoogleSheet[id] = JSON.stringify(dynamicElements); 
+                }
+            });
+
             // Get the current material type to retrieve the correct photo data
             const currentMaterialSection = document.querySelector(`.analyzer-section[style*="block"]`);
             if (currentMaterialSection) {
@@ -770,11 +834,11 @@
                 }
             }
 
-
+            // Generate PDF and Excel if selected
             if (sendPdfCheckbox.checked) {
                 const pdfBlob = await generatePDFBlob();
                 pdfBase64 = await blobToBase64(pdfBlob);
-                attachments.push({
+                emailJsAttachments.push({
                     name: "Опросный лист.pdf",
                     data: pdfBase64,
                     type: "application/pdf"
@@ -785,7 +849,7 @@
             if (sendExcelCheckbox.checked) {
                 const excelBlob = generateExcelBlob();
                 excelBase64 = await blobToBase64(excelBlob);
-                attachments.push({
+                emailJsAttachments.push({
                     name: "Опросный лист.xlsx",
                     data: excelBase64,
                     type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -793,53 +857,109 @@
                 console.log("Excel Base64 generated. Length:", excelBase64 ? excelBase64.length : 0);
             }
 
-            const emailJsPublicKey = "2p7l9sK9Zfj6c2SXi"; 
-            const serviceID = "service_1rnpxea";
-            const templateID = "template_sk137ts";
+            // --- Отправка в EmailJS ---
+            // Будет выполнена, если attachments.length > 0
+            if (emailJsAttachments.length > 0 || !sendPdfCheckbox.checked && !sendExcelCheckbox.checked) { // Отправляем, даже если нет вложений, для базового письма
+                const emailJsPublicKey = "2p7l9sK9Zfj6c2SXi"; 
+                const serviceID = "service_1rnpxea";
+                const templateID = "template_sk137ts";
 
-            const templateParams = {
-                to: `science.techade@gmail.com`,
-                email: email,
-                company: form.company.value || 'Не указано',
-                date: form.date.value || 'Не указано',
-                contact_person: form.contact_person.value || 'Не указано',
-                phone: form.phone.value ? form.phone.value.replace(/\D/g, '') : 'Не указано',
-                country: form.country.value || 'Не указано',
-                location: form.location.value || 'Не указано',
-                material: material,
-                subject: `Опросный лист от ${form.company.value || 'Неизвестной компании'} (${form.date.value || 'Неизвестной даты'})`,
-                time: new Date().toISOString(),
-                // Add the installation photo Data URL to template params if available
-                installation_photo_url: installationPhotoDataUrl || '' 
-            };
+                const templateParams = {
+                    to: `science.techade@gmail.com`,
+                    email: email,
+                    company: form.company.value || 'Не указано',
+                    date: form.date.value || 'Не указано',
+                    contact_person: form.contact_person.value || 'Не указано',
+                    phone: form.phone.value ? form.phone.value.replace(/\D/g, '') : 'Не указано',
+                    country: form.country.value || 'Не указано',
+                    location: form.location.value || 'Не указано',
+                    material: material,
+                    subject: `Опросный лист от ${form.company.value || 'Неизвестной компании'} (${form.date.value || 'Неизвестной даты'})`,
+                    time: new Date().toISOString(),
+                    installation_photo_url: installationPhotoDataUrl || '' 
+                };
 
-            const requestBody = {
-                service_id: serviceID,
-                template_id: templateID,
-                user_id: emailJsPublicKey,
-                template_params: templateParams,
-                // Only add attachment array if there are actual attachments
-                ...(attachments.length > 0 && { attachment: attachments }) 
-            };
+                const requestBody = {
+                    service_id: serviceID,
+                    template_id: templateID,
+                    user_id: emailJsPublicKey,
+                    template_params: templateParams,
+                    ...(emailJsAttachments.length > 0 && { attachment: emailJsAttachments }) 
+                };
 
-            const response = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
-                method: "POST",
-                headers: {
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify(requestBody)
-            });
+                try {
+                    const response = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify(requestBody)
+                    });
 
-            if (response.ok) {
-                alert("Опросный лист успешно отправлен!");
-            } else {
-                const errorText = await response.text();
-                throw new Error(`Ошибка EmailJS: ${response.status} - ${errorText}`);
+                    if (response.ok) {
+                        alert("Опросный лист успешно отправлен (EmailJS)!");
+                    } else {
+                        const errorText = await response.text();
+                        console.error("Ошибка EmailJS:", errorText);
+                        // Проверяем, если это ошибка, связанная с размером или форматом вложений
+                        if (errorText.includes("The parameters are invalid") || response.status === 413) { // 413 Payload Too Large
+                            throw new Error(`Ошибка EmailJS: Вложения слишком большие или некорректны. Попробуйте отправить без них. Подробнее: ${response.status} - ${errorText}`);
+                        } else {
+                            throw new Error(`Ошибка EmailJS: ${response.status} - ${errorText}`);
+                        }
+                    }
+                } catch (emailJsErr) {
+                    console.error("Ошибка при отправке через EmailJS:", emailJsErr);
+                    errorMessageDiv.textContent = `Ошибка EmailJS: ${emailJsErr.message || "Неизвестная ошибка EmailJS."}`;
+                    errorMessageDiv.style.display = 'block';
+                    // Если EmailJS не сработал, все равно пытаемся отправить в Google Sheet
+                }
             }
 
+
+            // --- Отправка в Google Sheet ---
+            // Собираем все данные для Google Sheet.
+            const googleSheetPayload = {
+                // Основные поля
+                date: form.date.value || '',
+                company: form.company.value || '',
+                contact_person: form.contact_person.value || '',
+                phone: form.phone.value || '',
+                email: form.email.value || '',
+                country: form.country.value || '',
+                location: form.location.value || '',
+                material_type: material, // Using a different name to distinguish from general 'material'
+                
+                // Динамические элементы
+                'elements-ca-u': formDataForGoogleSheet['elements-ca-u'] || '',
+                'light-elements': formDataForGoogleSheet['light-elements'] || '',
+                'sinter-elements-ca-u': formDataForGoogleSheet['sinter-elements-ca-u'] || '',
+                'multiplex-elements-ca-u': formDataForGoogleSheet['multiplex-elements-ca-u'] || '',
+                'multiplex-light-elements': formDataForGoogleSheet['multiplex-light-elements'] || '',
+                'courier-elements-ca-u': formDataForGoogleSheet['courier-elements-ca-u'] || '',
+                'courier-light-elements': formDataForGoogleSheet['courier-light-elements'] || '',
+
+                // Поля специфичных секций (например, pulp_streams)
+                // Собираем данные из активной секции
+                ...Object.fromEntries(
+                    Array.from(currentMaterialSection.querySelectorAll('input:not([type="file"]):not([type="checkbox"]), select, textarea')).map(el => [el.name, el.value])
+                ),
+                // Чекбоксы из активной секции
+                ...Object.fromEntries(
+                    Array.from(currentMaterialSection.querySelectorAll('input[type="checkbox"]')).map(el => [el.name, el.checked ? 'Да' : 'Нет'])
+                ),
+                
+                // Base64 вложения
+                pdf_attachment_base64: pdfBase64 || '',
+                excel_attachment_base64: excelBase64 || '',
+                installation_photo_base64: installationPhotoDataUrl || ''
+            };
+
+            await sendToGoogleSheet(googleSheetPayload, pdfBase64, excelBase64, installationPhotoDataUrl);
+
         } catch (err) {
-            console.error("Ошибка при отправке формы:", err);
-            errorMessageDiv.textContent = `Ошибка: ${err.message || "Неизвестная ошибка."} Пожалуйста, попробуйте еще раз.`;
+            console.error("Критическая ошибка при отправке формы:", err);
+            errorMessageDiv.textContent = `Критическая ошибка: ${err.message || "Неизвестная ошибка."} Пожалуйста, попробуйте еще раз или обратитесь в поддержку.`;
             errorMessageDiv.style.display = 'block';
         }
     }
