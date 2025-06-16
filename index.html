@@ -546,39 +546,31 @@
     }
 
     document.addEventListener("DOMContentLoaded", function () {
-        // Инициализация EmailJS: Удалена, так как мы используем прямой fetch запрос.
-        // emailjs.init("j3_jznqK0lyaaXc1e"); // Эту строку мы убрали
-
         const materialSelect = document.getElementById("material");
         if (materialSelect) {
             materialSelect.addEventListener("change", () => {
                 showAnalyzerSection(materialSelect.value);
-                containers.forEach(restoreDynamicValues); // Восстанавливаем данные при смене типа материала
+                containers.forEach(restoreDynamicValues);
             });
-            // Показываем секцию при загрузке страницы, если выбран материал
             showAnalyzerSection(materialSelect.value);
             containers.forEach(restoreDynamicValues);
         }
 
-        // Привязываем превью изображений для каждой секции
         ["pulp", "sinter", "multiplex", "courier"].forEach(bindPhotoPreview);
 
         const submitBtn = document.getElementById("submit-button");
         if (submitBtn) {
-            submitBtn.addEventListener("click", async (event) => { // Добавляем async, так как submitForm асинхронная
-                event.preventDefault(); // Предотвращаем стандартную отправку формы
-                await submitForm(); // Явно вызываем вашу функцию submitForm
+            submitBtn.addEventListener("click", async (event) => {
+                event.preventDefault();
+                await submitForm();
             });
         }
     });
 
-    // --- ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ ДЛЯ КОНВЕРТАЦИИ BLOB В BASE64 ---
     async function blobToBase64(blob) {
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onloadend = () => {
-                // FileReader.result будет "data:image/jpeg;base64,..."
-                // Нам нужна только часть после запятой
                 const base64String = reader.result.split(',')[1];
                 resolve(base64String);
             };
@@ -587,7 +579,6 @@
         });
     }
 
-    // --- ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ГЕНЕРИРУЕТ EXCEL BLOB ---
     function generateExcelBlob() {
         const form = document.getElementById("form");
         const material = form.material.value;
@@ -600,7 +591,7 @@
         push("Телефон", form.phone.value);
         push("Email", form.email.value);
         push("Страна", form.country.value);
-        push("Отчет от", form.location.value); // Изменено на "Отчет от" для большей ясности
+        push("Отчет от", form.location.value);
         push("Тип материала", material);
 
         const section = document.getElementById(`section-${material}`);
@@ -609,7 +600,7 @@
                 if (input.type === "file" || input.tagName === 'BUTTON') return;
 
                 const labelElement = input.closest(".mb-3")?.querySelector("label") || input.closest(".form-check")?.querySelector("label");
-                const label = labelElement ? labelElement.textContent?.trim().replace('*', '') : input.name; // Удаляем звездочку
+                const label = labelElement ? labelElement.textContent?.trim().replace('*', '') : input.name;
                 const value = input.type === "checkbox" ? (input.checked ? "Да" : "Нет") : input.value;
                 push(label, value);
             });
@@ -635,12 +626,10 @@
         return new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     }
 
-    // --- ВСПОМОГАТЕЛЬНАЯ ФУНКЦИЯ: ГЕНЕРИРУЕТ PDF BLOB ---
     async function generatePDFBlob() {
         const originalContent = document.getElementById("pdf-content");
         const clone = originalContent.cloneNode(true);
 
-        // Убедимся, что отображается только нужная секция
         clone.querySelectorAll(".analyzer-section").forEach(section => {
             section.style.display = "none";
         });
@@ -648,7 +637,6 @@
         const selected = clone.querySelector(`#section-${material}`);
         if (selected) selected.style.display = "block";
 
-        // Заменяем поля ввода на простой текст для PDF
         clone.querySelectorAll("input, select, textarea").forEach(el => {
             if (el.type === "hidden" || el.type === "file" || el.tagName === 'BUTTON') return;
 
@@ -673,7 +661,6 @@
             el.replaceWith(div);
         });
 
-        // Встраиваем динамические элементы в клон для PDF
         const allDynamicContainers = Array.from(document.querySelectorAll('div[id$="elements-ca-u"], div[id$="light-elements"], div[id$="sinter-elements-ca-u"], div[id$="multiplex-elements-ca-u"], div[id$="multiplex-light-elements"], div[id$="courier-elements-ca-u"], div[id$="courier-light-elements"]')).map(el => el.id);
 
         allDynamicContainers.forEach(id => {
@@ -693,7 +680,6 @@
             }
         });
 
-        // Встраивание изображения в PDF
         const photoInputId = `installation_photo_${material}`;
         const photoInput = document.getElementById(photoInputId);
         const jpegData = photoInput?.dataset?.jpeg;
@@ -710,7 +696,6 @@
             }
         }
 
-        // Создаем временный элемент-обертку для html2pdf
         const wrapper = document.createElement("div");
         wrapper.style.cssText = "position: absolute; top: -9999px; left: -9999px; width: 210mm; padding: 20px; background: white; opacity: 0; z-index: -1;";
         wrapper.appendChild(clone);
@@ -731,81 +716,64 @@
                 document.body.removeChild(wrapper);
             }
         }
-        return pdfBlob; // Функция теперь ВОЗВРАЩАЕТ Blob
+        return pdfBlob;
     }
 
-    // --- ГЛАВНАЯ ФУНКЦИЯ submitForm С ИЗМЕНЕНИЯМИ ---
     async function submitForm() {
         const form = document.getElementById("form");
         const emailInput = form.email;
         const materialSelect = form.material;
         const errorMessageDiv = document.getElementById("error-message");
 
-        // Сброс ошибок
         errorMessageDiv.style.display = 'none';
         errorMessageDiv.textContent = '';
         emailInput.classList.remove('is-invalid');
         materialSelect.classList.remove('is-invalid');
 
-        // Проверка обязательных полей HTML5
         if (!form.checkValidity()) {
             errorMessageDiv.textContent = "Пожалуйста, заполните все обязательные поля формы.";
             errorMessageDiv.style.display = 'block';
-            form.reportValidity(); // Показать стандартные ошибки валидации браузера
+            form.reportValidity();
             return;
         }
 
         const email = emailInput.value;
         const material = materialSelect.value;
 
-        // Вместо создания ссылок, будем получать BLOB'ы
         let pdfBlob;
         let excelBlob;
 
         try {
-            // Генерируем Excel Blob
             excelBlob = generateExcelBlob();
-
-            // Генерируем PDF Blob
             pdfBlob = await generatePDFBlob();
 
-            // --- КОНВЕРТИРУЕМ BLOB'Ы В BASE64 ---
             const pdfBase64 = await blobToBase64(pdfBlob);
             const excelBase64 = await blobToBase64(excelBlob);
 
-            // Публичный ключ EmailJS, который вы используете
-            const emailJsPublicKey = "2p7l9sK9Zfj6c25X1"; // Исправленный ключ
+            const emailJsPublicKey = "2p7l9sK9Zfj6c25X1";
             const serviceID = "service_1rnpxea";
             const templateID = "template_sk137ts";
 
-            // Параметры для вашего шаблона EmailJS
             const templateParams = {
-                to: `science.techade@gmail.com`, // Email получателя
-                email: email, // Email отправителя (из формы)
-                company: form.company.value || 'Не указано', // Гарантируем непустое значение
-                date: form.date.value || 'Не указано',       // Гарантируем непустое значение
-                contact_person: form.contact_person.value || 'Не указано', 
-                phone: form.phone.value ? form.phone.value.replace(/\D/g, '') : 'Не указано', 
-                country: form.country.value || 'Не указано', 
-                location: form.location.value || 'Не указано', 
+                to: `science.techade@gmail.com`,
+                email: email,
+                company: form.company.value || 'Не указано',
+                date: form.date.value || 'Не указано',
+                contact_person: form.contact_person.value || 'Не указано',
+                phone: form.phone.value ? form.phone.value.replace(/\D/g, '') : 'Не указано',
+                country: form.country.value || 'Не указано',
+                location: form.location.value || 'Не указано',
                 material: material,
-                subject: `Тестовый опросный лист (отладка)`, // Временно статический subject
-                time: new Date().toLocaleString(),
+                subject: `Опросный лист от ${form.company.value || 'Неизвестной компании'} (${form.date.value || 'Неизвестной даты'})`,
+                time: new Date().toISOString(),
             };
 
-            // !!! ВРЕМЕННЫЙ ЛОГ для отладки: Проверьте консоль браузера перед отправкой !!!
-            console.log("Отправляемые template_params:", templateParams);
-            console.log("PDF Base64 (начало):", pdfBase64 ? pdfBase64.substring(0, 100) + "..." : "N/A"); // Логируем начало строки
-            console.log("Excel Base64 (начало):", excelBase64 ? excelBase64.substring(0, 100) + "..." : "N/A"); // Логируем начало строки
-
-
-            // Тело запроса для EmailJS API
             const requestBody = {
                 service_id: serviceID,
                 template_id: templateID,
-                user_id: emailJsPublicKey, // Имя поля user_id
+                user_id: emailJsPublicKey,
                 template_params: templateParams,
-                attachment: [ // Вложения: изменено с attachments на attachment (единственное число)
+                attachment: [
                     {
                         name: "Опросный лист.pdf",
                         data: pdfBase64,
@@ -819,19 +787,18 @@
                 ]
             };
 
-            // Отправка запроса напрямую к API EmailJS через fetch
             const response = await fetch("https://api.emailjs.com/api/v1.0/email/send", {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json" // Обязательно указываем тип контента
+                    "Content-Type": "application/json"
                 },
-                body: JSON.stringify(requestBody) // Преобразуем объект в JSON строку
+                body: JSON.stringify(requestBody)
             });
 
-            if (response.ok) { // Проверяем, был ли запрос успешным (статус 200-299)
-                alert("Опросный лист успешно отправлен!"); // Лучше использовать модальное окно вместо alert
+            if (response.ok) {
+                alert("Опросный лист успешно отправлен!");
             } else {
-                const errorText = await response.text(); // Читаем текстовый ответ для детальной ошибки
+                const errorText = await response.text();
                 throw new Error(`Ошибка EmailJS: ${response.status} - ${errorText}`);
             }
 
@@ -852,7 +819,7 @@
         inputElement.placeholder = "Элемент (напр. Fe)";
         inputElement.name = `${containerId}_element[]`;
         inputElement.className = "form-control";
-        inputElement.value = ""; // Очищаем значение при добавлении новой строки
+        inputElement.value = "";
         inputElement.oninput = () => saveDynamicValues(containerId);
 
         const inputRange = document.createElement("input");
@@ -860,7 +827,7 @@
         inputRange.placeholder = "Диапазон концентрации";
         inputRange.name = `${containerId}_range[]`;
         inputRange.className = "form-control";
-        inputRange.value = ""; // Очищаем значение при добавлении новой строки
+        inputRange.value = "";
         inputRange.oninput = () => saveDynamicValues(containerId);
 
         const removeBtn = document.createElement("button");
