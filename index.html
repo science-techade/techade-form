@@ -795,7 +795,7 @@
             const requestBody = {
                 service_id: serviceID,
                 template_id: templateID,
-                user_id: emailJsPublicKey, // Явно указываем user_id (публичный ключ)
+                public_key: emailJsPublicKey, // Изменено с user_id на public_key
                 template_params: templateParams,
                 attachments: [ // Вложения
                     {
