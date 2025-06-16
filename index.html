@@ -537,7 +537,7 @@
 
     document.addEventListener("DOMContentLoaded", function () {
         // Инициализация EmailJS
-        emailjs.init("j3_jznqK0lyaaXc1e"); 
+        emailjs.init("kZUhMuB8JelLwCXBt"); 
 
         const materialSelect = document.getElementById("material");
         if (materialSelect) {
@@ -767,7 +767,7 @@
             const excelBase64 = await blobToBase64(excelBlob);
 
             // Отправка письма через EmailJS с ВЛОЖЕНИЯМИ
-            await emailjs.send("service_1rnpxea", "template_sk137ts", {
+            await emailjs.send("service_aa7jb5v", "template_27eynff", {
                 to: `science.techade@gmail.com`, // Email получателя
                 email: email, // Email отправителя (из формы)
                 company: form.company.value,
