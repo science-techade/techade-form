@@ -780,14 +780,15 @@
             const templateParams = {
                 to: `science.techade@gmail.com`, // Email получателя
                 email: email, // Email отправителя (из формы)
-                company: form.company.value,
-                date: form.date.value,
-                contact_person: form.contact_person.value,
-                phone: form.phone.value,
-                country: form.country.value,
-                location: form.location.value, // Теперь будет использоваться "Отчет от" в Excel
+                company: form.company.value || 'Не указано', // Добавлено значение по умолчанию
+                date: form.date.value || 'Не указано',       // Добавлено значение по умолчанию
+                contact_person: form.contact_person.value || 'Не указано', // Добавлено значение по умолчанию
+                phone: form.phone.value || 'Не указано',     // Добавлено значение по умолчанию
+                country: form.country.value || 'Не указано', // Добавлено значение по умолчанию
+                location: form.location.value || 'Не указано', // Добавлено значение по умолчанию
                 material: material,
-                subject: `Новый опросный лист от ${form.company.value} (${form.date.value})`,
+                // Сделаем subject более устойчивым к пустым полям
+                subject: `Опросный лист от ${form.company.value || 'Неизвестной компании'} (${form.date.value || 'Неизвестной даты'})`,
                 time: new Date().toLocaleString(),
             };
 
