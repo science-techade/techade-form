@@ -17,18 +17,9 @@
             content: " *";
             color: red;
         }
-        /* Стили для PDF - скрываем элементы управления, которые не нужны в PDF */
-        @media print {
-            .btn, .form-control[type="file"], .attachment-checkbox {
-                display: none !important;
-            }
-            /* Убедимся, что поля формы правильно отображаются в PDF */
-            .form-control, .form-select {
-                border: none !important;
-                background-color: transparent !important;
-                padding: 0 !important;
-            }
-            /* Old checkbox print styles removed as we replace the entire form-check div */
+        /* Скрываем элементы управления, которые не нужны в PDF, используя class вместо media print */
+        .hide-for-pdf {
+            display: none !important;
         }
     </style>
 </head>
@@ -420,7 +411,7 @@
                 </div>
             </div>
         </div>
-        <div class="mb-3 mt-4">
+        <div class="mb-3 mt-4 hide-for-pdf">
             <!-- New checkboxes for attachment control -->
             <div class="form-check attachment-checkbox">
                 <input class="form-check-input" type="checkbox" id="sendPdf" checked>
@@ -429,7 +420,7 @@
             
             <button id="submit-button" type="button" class="btn btn-primary">Отправить</button>
         </div>
-        <div class="mt-3">
+        <div class="mt-3 hide-for-pdf">
             <small class="text-muted"><span style="color: red;">*</span> - обязательные поля</small>
         </div>
     </form>
@@ -627,102 +618,97 @@
     }
 
     async function generatePDFBlob() {
-        const originalContent = document.getElementById("pdf-content");
-        const clone = originalContent.cloneNode(true);
+        const form = document.getElementById("form");
+        const material = form.material.value;
+        const pdfPrintableContent = document.createElement("div"); // Создаем новый контейнер для PDF
 
-        clone.querySelectorAll(".analyzer-section").forEach(section => {
-            section.style.display = "none";
-        });
-        const material = document.getElementById("material").value;
-        const selected = clone.querySelector(`#section-${material}`);
-        if (selected) selected.style.display = "block";
+        // Helper function to add a row to the PDF content
+        function addPdfRow(label, value) {
+            const rowDiv = document.createElement("div");
+            rowDiv.style.marginBottom = "4px";
+            rowDiv.style.padding = "4px 8px";
+            rowDiv.style.border = "1px solid #ccc";
+            rowDiv.style.borderRadius = "3px";
+            rowDiv.style.backgroundColor = "#f9f9f9";
+            rowDiv.style.fontSize = "13px";
+            rowDiv.innerHTML = `<strong>${label}:</strong> ${value || '—'}`;
+            pdfPrintableContent.appendChild(rowDiv);
+        }
 
-        clone.querySelectorAll("input, select, textarea").forEach(el => {
-            if (el.type === "hidden" || el.type === "file" || el.tagName === 'BUTTON') return;
+        // --- Основные сведения ---
+        addPdfRow("Дата заполнения опросного листа", form.date.value);
+        addPdfRow("Название компании", form.company.value);
+        addPdfRow("Контактное лицо", form.contact_person.value);
+        addPdfRow("Телефон", form.phone.value);
+        addPdfRow("Email", form.email.value);
+        addPdfRow("Страна", form.country.value);
+        addPdfRow("Местонахождение", form.location.value);
+        addPdfRow("Тип анализируемого материала", form.material.options[form.material.selectedIndex]?.text);
 
-            // Специальная обработка для чекбоксов
-            if (el.type === "checkbox") {
-                const formCheckDiv = el.closest(".form-check");
-                const label = formCheckDiv ? formCheckDiv.querySelector("label") : null;
-                const labelText = label ? label.textContent.trim() : el.name; // Получаем текст метки или имя
-                const status = el.checked ? "Да" : "Нет";
+        // --- Секция по типу материала ---
+        const currentMaterialSection = document.getElementById(`section-${material}`);
+        if (currentMaterialSection) {
+            const sectionTitle = currentMaterialSection.querySelector('h5')?.textContent || `Секция для ${material}`;
+            const sectionHeader = document.createElement("h5");
+            sectionHeader.style.marginTop = "20px";
+            sectionHeader.textContent = sectionTitle;
+            pdfPrintableContent.appendChild(sectionHeader);
 
-                const newTextDiv = document.createElement("div");
-                newTextDiv.textContent = `${labelText}: ${status}`;
-                newTextDiv.style.padding = "4px 8px";
-                newTextDiv.style.border = "1px solid #ccc";
-                newTextDiv.style.borderRadius = "3px";
-                newTextDiv.style.minHeight = "20px";
-                newTextDiv.style.marginBottom = "4px";
-                newTextDiv.style.backgroundColor = "#f9f9f9";
-                newTextDiv.style.fontSize = "13px";
+            // Iterate over all input, select, textarea elements in the active section
+            currentMaterialSection.querySelectorAll('input:not([type="file"]):not([type="button"]), select, textarea').forEach(el => {
+                const labelElement = el.closest(".mb-3")?.querySelector("label") || el.closest(".form-check")?.querySelector("label");
+                const labelText = labelElement ? labelElement.textContent.trim().replace('*', '') : el.name;
+                let value;
 
-                if (formCheckDiv) {
-                    formCheckDiv.replaceWith(newTextDiv); // Заменяем весь .form-check div
+                if (el.type === "checkbox") {
+                    value = el.checked ? "Да" : "Нет";
+                } else if (el.tagName === "SELECT") {
+                    value = el.options[el.selectedIndex]?.text;
                 } else {
-                    el.replaceWith(newTextDiv); // Fallback, если .form-check не найден
+                    value = el.value;
                 }
-            }
-            // Обработка для select элементов
-            else if (el.tagName === "SELECT") {
-                const div = document.createElement("div");
-                div.textContent = el.options[el.selectedIndex]?.text || "—";
-                div.style.padding = "4px 8px";
-                div.style.border = "1px solid #ccc";
-                div.style.borderRadius = "3px";
-                div.style.minHeight = "20px";
-                div.style.marginBottom = "4px";
-                div.style.backgroundColor = "#f9f9f9";
-                div.style.fontSize = "13px";
-                el.replaceWith(div);
-            }
-            // Обработка для всех остальных текстовых полей
-            else {
-                const div = document.createElement("div");
-                div.textContent = el.value?.trim() || "—";
-                div.style.padding = "4px 8px";
-                div.style.border = "1px solid #ccc";
-                div.style.borderRadius = "3px";
-                div.style.minHeight = "20px";
-                div.style.marginBottom = "4px";
-                div.style.backgroundColor = "#f9f9f9";
-                div.style.fontSize = "13px";
-                el.replaceWith(div);
-            }
-        });
+                addPdfRow(labelText, value);
+            });
 
-        const allDynamicContainers = Array.from(document.querySelectorAll('div[id$="elements-ca-u"], div[id$="light-elements"], div[id$="sinter-elements-ca-u"], div[id$="multiplex-elements-ca-u"], div[id$="multiplex-light-elements"], div[id$="courier-elements-ca-u"], div[id$="courier-light-elements"]')).map(el => el.id);
+            // Add dynamic elements for the active section
+            const dynamicContainersInActiveSection = currentMaterialSection.querySelectorAll('div[id$="elements-ca-u"], div[id$="light-elements"]');
+            dynamicContainersInActiveSection.forEach(container => {
+                saveDynamicValues(container.id); // Ensure latest dynamic values are saved
+                const dynamicElements = dynamicElementData[container.id];
+                if (dynamicElements && dynamicElements.length > 0) {
+                    const dynamicHeader = document.createElement("div");
+                    dynamicHeader.style.marginTop = "10px";
+                    dynamicHeader.style.fontWeight = "bold";
+                    dynamicHeader.textContent = `Анализируемые элементы из ${container.id.includes('light') ? 'легких химических элементов' : 'Ca до U'}:`;
+                    pdfPrintableContent.appendChild(dynamicHeader);
 
-        allDynamicContainers.forEach(id => {
-            const originalBlock = document.getElementById(id);
-            const cloneBlock = clone.querySelector(`#${id}`);
-            if (!originalBlock || !cloneBlock) return; // Ensure elements exist in both original and clone
+                    dynamicElements.forEach(entry => {
+                        const elementDiv = document.createElement("div");
+                        elementDiv.style.marginBottom = "2px";
+                        elementDiv.textContent = `${entry.element || "—"} — ${entry.range || "—"}`;
+                        pdfPrintableContent.appendChild(elementDiv);
+                    });
+                }
+            });
 
-            cloneBlock.innerHTML = ""; // Clear existing elements in clone to re-add static ones
-            const dynamicElements = dynamicElementData[id];
-            if (dynamicElements) {
-                dynamicElements.forEach(entry => {
-                    const div = document.createElement("div");
-                    div.textContent = `${entry.element || "—"} — ${entry.range || "—"}`;
-                    div.style.marginBottom = "4px";
-                    cloneBlock.appendChild(div);
-                });
-            }
-        });
+            // Add photo if present for the active section
+            const photoInput = document.getElementById(`installation_photo_${material}`);
+            const jpegData = photoInput?.dataset?.jpeg;
+            if (jpegData) {
+                const imgHeader = document.createElement("div");
+                imgHeader.style.marginTop = "20px";
+                imgHeader.style.fontWeight = "bold";
+                imgHeader.textContent = "Фото местонахождения:";
+                pdfPrintableContent.appendChild(imgHeader);
 
-        const photoInputId = `installation_photo_${material}`;
-        const photoInput = document.getElementById(photoInputId);
-        const jpegData = photoInput?.dataset?.jpeg;
-        if (jpegData) {
-            const img = document.createElement("img");
-            img.src = jpegData;
-            img.style.maxWidth = "100%";
-            img.style.marginTop = "10px";
-            img.style.pageBreakInside = 'avoid';
-            if (selected) {
-                selected.appendChild(img);
-            } else {
-                clone.appendChild(img);
+                const img = document.createElement("img");
+                img.src = jpegData;
+                img.style.maxWidth = "100%";
+                img.style.height = "auto";
+                img.style.marginTop = "5px";
+                img.style.border = "1px solid #ddd";
+                img.style.pageBreakInside = 'avoid'; // Prevent image from breaking across pages
+                pdfPrintableContent.appendChild(img);
             }
         }
 
@@ -741,10 +727,10 @@
             opacity: 0; /* Make it completely invisible */
             pointer-events: none; /* Ensure no interaction */
             z-index: -1000; /* Behind everything else */
-            overflow: hidden; /* Prevent scrollbars from appearing */
+            overflow: auto; /* Allow content to scroll within the wrapper if needed, html2pdf will handle pages */
         `;
-        // Append the prepared clone to the wrapper
-        wrapper.appendChild(clone);
+        // Append the prepared content to the wrapper
+        wrapper.appendChild(pdfPrintableContent);
         // Append the wrapper to the body
         document.body.appendChild(wrapper);
 
