@@ -611,14 +611,31 @@
     });
 
     async function blobToBase64(blob) {
+        console.log("blobToBase64: Starting conversion.");
+        if (!blob) {
+            console.error("blobToBase64: Input blob is null or undefined.");
+            return null;
+        }
+        if (!(blob instanceof Blob)) {
+            console.error("blobToBase64: Input is not a Blob object. Type:", typeof blob);
+            return null;
+        }
+        console.log("blobToBase64: Blob size:", blob.size, "bytes");
+
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onloadend = () => {
                 const base64String = reader.result.split(',')[1];
+                if (!base64String) {
+                    console.error("blobToBase64: Base64 string is empty or null after splitting.");
+                    resolve(null);
+                    return;
+                }
+                console.log("blobToBase64: Conversion complete. Base64 length:", base64String.length);
                 resolve(base64String);
             };
-            reader.onerror = (error) => { // Added error handling for FileReader
-                console.error("FileReader error:", error);
+            reader.onerror = (error) => {
+                console.error("blobToBase64: FileReader error:", error);
                 reject(error);
             };
             reader.readAsDataURL(blob);
@@ -848,9 +865,14 @@
             await new Promise(resolve => setTimeout(resolve, 300));
             pdfBlob = await html2pdf().set(opt).from(pdfRenderContainer).outputPdf('blob');
             console.log("generatePDFBlob: html2pdf generation completed.");
+            if (pdfBlob) {
+                alert(`PDF Blob generated! Size: ${pdfBlob.size} bytes. Checking for non-zero size.`);
+            } else {
+                alert("PDF Blob is NULL! Something went wrong with html2pdf generation.");
+            }
         } catch (error) {
             console.error("generatePDFBlob: Error during html2pdf generation:", error);
-            // Если произошла ошибка, возвращаем null и выводим сообщение об ошибке
+            alert(`Error generating PDF: ${error.message}. Check console.`);
             return null;
         } finally {
             // Удаляем временный контейнер после генерации PDF
