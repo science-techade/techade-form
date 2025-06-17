@@ -630,8 +630,8 @@
                 const base64String = reader.result ? String(reader.result).split(',')[1] : null; // Ensure result is string before split
                 if (!base64String) {
                     console.error("blobToBase64: Base64 string is empty or null after splitting.");
-                    alert("Ошибка: Не удалось извлечь Base64 строку из PDF Blob.");
-                    resolve(null);
+                    // alert("Ошибка: Не удалось извлечь Base64 строку из PDF Blob."); // Removed alert here, handled in submitForm
+                    resolve(null); // Resolve with null if conversion fails or result is empty
                     return;
                 }
                 console.log("blobToBase64: Conversion complete. Base64 length:", base64String.length);
@@ -639,8 +639,8 @@
             };
             reader.onerror = (error) => {
                 console.error("blobToBase64: FileReader error:", error);
-                alert(`Ошибка FileReader при конвертации PDF: ${error.message}.`);
-                reject(error);
+                // alert(`Ошибка FileReader при конвертации PDF: ${error.message}.`); // Removed alert here, handled in submitForm
+                reject(error); // Reject on error
             };
             reader.readAsDataURL(blob);
         });
@@ -953,8 +953,8 @@
         const email = emailInput.value;
         const material = materialSelect.value;
 
-        let pdfBase64 = null;
-        let installationPhotoDataUrl = null; 
+        let pdfBase64 = ''; // Initialize as empty string
+        let installationPhotoDataUrl = ''; // Initialize as empty string
         let formDataForGoogleSheet = {};
 
         try {
@@ -999,17 +999,31 @@
             // Generate PDF if selected
             if (sendPdfCheckbox.checked) {
                 console.log("submitForm: sendPdfCheckbox is checked. Calling generatePDFBlob.");
-                pdfBase64 = await generatePDFBlob();
-                // Ensure pdfBase64 is a string, even if empty
-                pdfBase64 = pdfBase64 || ''; 
-                if (pdfBase64.length > 0) { // Check length after assignment
-                    console.log("submitForm: PDF Base64 generated. Length:", pdfBase64.length);
-                } else {
-                    console.error("submitForm: PDF generation failed or returned null or empty. PDF will not be attached.");
-                    alert("Внимание: PDF-файл не был сгенерирован или был пустым. Он не будет прикреплен к письму.");
+                try {
+                    const generatedPdfBlob = await generatePDFBlob();
+                    if (generatedPdfBlob) {
+                        const convertedBase64 = await blobToBase64(generatedPdfBlob);
+                        if (convertedBase64 && convertedBase64.length > 0) {
+                            pdfBase64 = convertedBase64;
+                            console.log("submitForm: PDF Base64 generated. Length:", pdfBase64.length);
+                        } else {
+                            console.error("submitForm: PDF Base64 is null or empty after conversion. PDF will not be attached.");
+                            alert("Внимание: PDF-файл не был сгенерирован (конвертация в Base64 не удалась). Он не будет прикреплен к письму.");
+                            pdfBase64 = ''; 
+                        }
+                    } else {
+                        console.error("submitForm: generatePDFBlob returned null. PDF will not be attached.");
+                        alert("Внимание: PDF-файл не был сгенерирован. Он не будет прикреплен к письму.");
+                        pdfBase64 = ''; 
+                    }
+                } catch (pdfGenError) {
+                    console.error("submitForm: Error during PDF generation or Base64 conversion:", pdfGenError);
+                    alert(`Внимание: Ошибка при генерации PDF: ${pdfGenError.message}. Он не будет прикреплен к письму.`);
+                    pdfBase64 = ''; 
                 }
             } else {
                 console.log("submitForm: sendPdfCheckbox is NOT checked. Skipping PDF generation.");
+                pdfBase64 = ''; 
             }
             
             // --- Отправка в Google Sheet ---
@@ -1023,7 +1037,7 @@
                 email: formDataForGoogleSheet.email || '',
                 country: formDataForGoogleSheet.country || '',
                 location: formDataForGoogleSheet.location || '',
-                material_type: formDataForGoogleSheet.material || '', // Ensure it maps correctly from form's 'material'
+                material_type: formDataForGoogleSheet.material || '', 
 
                 // Динамические элементы (stringified JSON)
                 'elements-ca-u': formDataForGoogleSheet['elements-ca-u'] || '',
@@ -1043,7 +1057,7 @@
                 installation_photo_base64: installationPhotoDataUrl || ''
             };
 
-            console.log("sendToGoogleSheet: Отправка данных в Google Apps Script."); // Изменено на обычный лог
+            console.log("sendToGoogleSheet: Отправка данных в Google Apps Script."); 
             await sendToGoogleSheet(googleSheetPayload, pdfBase64, installationPhotoDataUrl); // РАСКОММЕНТИРОВАНО
             console.log("submitForm: sendToGoogleSheet called.");
 
@@ -1077,22 +1091,22 @@
 
         const removeBtn = document.createElement("button");
         removeBtn.type = "button";
-        removeBtn.className = "btn btn-outline-danger btn-sm";
-        removeBtn.textContent = "Удалить";
-        removeBtn.onclick = () => {
-            wrapper.remove();
+            removeBtn.className = "btn btn-outline-danger btn-sm";
+            removeBtn.textContent = "Удалить";
+            removeBtn.onclick = () => {
+                wrapper.remove();
+                saveDynamicValues(containerId);
+            };
+
+            wrapper.appendChild(inputElement);
+            wrapper.appendChild(inputRange);
+            wrapper.appendChild(removeBtn);
+            container.appendChild(wrapper);
+
             saveDynamicValues(containerId);
-        };
+        }
 
-        wrapper.appendChild(inputElement);
-        wrapper.appendChild(inputRange);
-        wrapper.appendChild(removeBtn);
-        container.appendChild(wrapper);
-
-        saveDynamicValues(containerId);
-    }
-
-    window.addElementRow = addElementRow;
-</script>
+        window.addElementRow = addElementRow;
+    </script>
 </body>
 </html>
