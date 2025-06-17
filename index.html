@@ -662,10 +662,9 @@
 
             const wrapperDiv = el.closest('.mb-3') || el.closest('.form-check'); // Находим родительский div для замены
             
-            // Если wrapperDiv не найден (что может быть для динамически добавленных элементов,
-            // которые не имеют mb-3 или form-check как прямых родителей),
-            // мы все равно пытаемся создать текстовый div и заменить сам элемент
             if (!wrapperDiv) {
+                // Если wrapperDiv не найден (например, для элементов, не обернутых в mb-3 или form-check)
+                // Просто заменяем сам элемент на текстовый div
                 const tempDiv = document.createElement('div');
                 tempDiv.textContent = el.value || '—';
                 el.replaceWith(tempDiv);
@@ -676,55 +675,25 @@
             const labelText = labelElement ? labelElement.textContent.trim().replace('*', '') : '';
             let displayValue = '';
 
+            // Создаем временный div для отображения значения
+            const displayDiv = document.createElement('div');
+            displayDiv.style.marginBottom = "4px";
+            displayDiv.style.padding = "4px 8px";
+            displayDiv.style.border = "1px solid #ccc";
+            displayDiv.style.borderRadius = "3px";
+            displayDiv.style.backgroundColor = "#f9f9f9";
+            displayDiv.style.fontSize = "13px";
+
             if (el.type === 'checkbox') {
                 displayValue = el.checked ? 'Да' : 'Нет';
-                
-                // Удаляем оригинальный чекбокс и его метку из wrapperDiv
-                if (el) el.remove();
-                if (labelElement) labelElement.remove();
-
-                // Создаем новый div для отображения текста и статуса
-                const newContentDiv = document.createElement('div');
-                newContentDiv.style.marginBottom = "4px";
-                newContentDiv.style.padding = "4px 8px"; // Исправлено с 44px
-                newContentDiv.style.border = "1px solid #ccc";
-                newContentDiv.style.borderRadius = "3px";
-                newContentDiv.style.backgroundColor = "#f9f9f9";
-                newContentDiv.style.fontSize = "13px";
-                newContentDiv.innerHTML = `<strong>${labelText}:</strong> ${displayValue}`;
-                
-                // Добавляем новый div в wrapperDiv
-                wrapperDiv.appendChild(newContentDiv);
-
+                displayDiv.innerHTML = `<strong>${labelText}:</strong> ${displayValue}`;
             } else if (el.type === 'file') {
-                const previewImg = wrapperDiv.querySelector('img');
                 const originalFileInput = document.getElementById(el.id); // Получаем оригинальный элемент для данных
                 const jpegData = originalFileInput ? originalFileInput.dataset?.jpeg : null;
 
-                // Удаляем оригинальные элементы из wrapperDiv
-                if (el) el.remove();
-                if (labelElement) labelElement.remove();
-                if (previewImg) previewImg.remove();
-
-                // Создаем div для отображения имени файла (если выбран)
-                const fileDisplayDiv = document.createElement('div');
-                fileDisplayDiv.style.marginBottom = "4px";
-                fileDisplayDiv.style.padding = "4px 8px";
-                fileDisplayDiv.style.border = "1px solid #ccc";
-                fileDisplayDiv.style.borderRadius = "3px";
-                fileDisplayDiv.style.backgroundColor = "#f9f9f9";
-                fileDisplayDiv.style.fontSize = "13px";
-
-                if (originalFileInput && originalFileInput.files && originalFileInput.files.length > 0) {
-                    fileDisplayDiv.innerHTML = `<strong>${labelText}:</strong> ${originalFileInput.files[0].name}`;
-                } else {
-                    fileDisplayDiv.innerHTML = `<strong>${labelText}:</strong> —`;
-                }
+                displayDiv.innerHTML = `<strong>${labelText}:</strong> ${originalFileInput && originalFileInput.files && originalFileInput.files.length > 0 ? originalFileInput.files[0].name : '—'}`;
                 
-                // Добавляем div с именем файла в wrapperDiv
-                wrapperDiv.appendChild(fileDisplayDiv);
-
-                // Если есть изображение, добавляем его в wrapperDiv
+                // Для файла, изображение будет добавлено отдельно после displayDiv
                 if (jpegData) {
                     const img = document.createElement("img");
                     img.src = jpegData;
@@ -733,46 +702,27 @@
                     img.style.marginTop = "5px";
                     img.style.border = "1px solid #ddd";
                     img.style.pageBreakInside = 'avoid';
-                    wrapperDiv.appendChild(img);
+                    wrapperDiv.appendChild(img); // Добавляем изображение
                 }
+
             } else if (el.tagName === 'SELECT') {
                 const originalSelect = document.getElementById(el.id); // Получаем оригинальный select для значения
                 displayValue = originalSelect ? originalSelect.options[originalSelect.selectedIndex]?.text : '—';
-                
-                // Удаляем оригинальный select и его метку из wrapperDiv
-                if (el) el.remove();
-                if (labelElement) labelElement.remove();
-
-                const newContentDiv = document.createElement('div');
-                newContentDiv.style.marginBottom = "4px";
-                newContentDiv.style.padding = "4px 8px";
-                newContentDiv.style.border = "1px solid #ccc";
-                newContentDiv.style.borderRadius = "3px";
-                newContentDiv.style.backgroundColor = "#f9f9f9";
-                newContentDiv.style.fontSize = "13px";
-                newContentDiv.innerHTML = `<strong>${labelText}:</strong> ${displayValue}`;
-                
-                // Добавляем новый div в wrapperDiv
-                wrapperDiv.appendChild(newContentDiv);
-
+                displayDiv.innerHTML = `<strong>${labelText}:</strong> ${displayValue}`;
             } else { // Для текстовых полей и чисел (input type="text", "number", "date", textarea)
                 displayValue = el.value || '—';
-                
-                // Удаляем оригинальный input/textarea и его метку из wrapperDiv
-                if (el) el.remove();
-                if (labelElement) labelElement.remove();
+                displayDiv.innerHTML = `<strong>${labelText}:</strong> ${displayValue}`;
+            }
 
-                const newContentDiv = document.createElement('div');
-                newContentDiv.style.marginBottom = "4px";
-                newContentDiv.style.padding = "4px 8px";
-                newContentDiv.style.border = "1px solid #ccc";
-                newContentDiv.style.borderRadius = "3px";
-                newContentDiv.style.backgroundColor = "#f9f9f9";
-                newContentDiv.style.fontSize = "13px";
-                newContentDiv.innerHTML = `<strong>${labelText}:</strong> ${displayValue}`;
-                
-                // Добавляем новый div в wrapperDiv
-                wrapperDiv.appendChild(newContentDiv);
+            // Добавляем displayDiv в wrapperDiv
+            wrapperDiv.appendChild(displayDiv);
+
+            // Удаляем оригинальные интерактивные элементы из wrapperDiv
+            if (el) el.remove();
+            if (labelElement) labelElement.remove();
+            // Удаляем previewImg только если это поле типа 'file' и previewImg существует
+            if (el.type === 'file' && wrapperDiv.querySelector('img')) {
+                wrapperDiv.querySelector('img').remove();
             }
         });
 
