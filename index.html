@@ -645,7 +645,7 @@
         });
         
         // Убеждаемся, что только выбранная секция анализатора видна в клоне
-        const materialType = document.getElementById('material').value;
+        const materialType = document.getElementById('material').value; // Берем значение из оригинальной формы
         pdfContentClone.querySelectorAll('.analyzer-section').forEach(section => {
             if (section.id !== `section-${materialType}`) {
                 section.style.display = 'none';
@@ -663,9 +663,9 @@
             const wrapperDiv = el.closest('.mb-3') || el.closest('.form-check'); // Находим родительский div для замены
             
             // Если wrapperDiv не найден (что может быть для динамически добавленных элементов,
-            // которые не имеют mb-3 или form-check как прямых родителей)
+            // которые не имеют mb-3 или form-check как прямых родителей),
+            // мы все равно пытаемся создать текстовый div и заменить сам элемент
             if (!wrapperDiv) {
-                // Если нет прямого родительского .mb-3 или .form-check, просто заменим сам элемент
                 const tempDiv = document.createElement('div');
                 tempDiv.textContent = el.value || '—';
                 el.replaceWith(tempDiv);
@@ -678,22 +678,33 @@
 
             if (el.type === 'checkbox') {
                 displayValue = el.checked ? 'Да' : 'Нет';
-                // Заменяем весь form-check div
+                
+                // Удаляем оригинальный чекбокс и его метку из wrapperDiv
+                if (el) el.remove();
+                if (labelElement) labelElement.remove();
+
+                // Создаем новый div для отображения текста и статуса
                 const newContentDiv = document.createElement('div');
                 newContentDiv.style.marginBottom = "4px";
-                newContentDiv.style.padding = "44px 8px";
+                newContentDiv.style.padding = "4px 8px"; // Исправлено с 44px
                 newContentDiv.style.border = "1px solid #ccc";
                 newContentDiv.style.borderRadius = "3px";
                 newContentDiv.style.backgroundColor = "#f9f9f9";
                 newContentDiv.style.fontSize = "13px";
                 newContentDiv.innerHTML = `<strong>${labelText}:</strong> ${displayValue}`;
-                wrapperDiv.replaceWith(newContentDiv);
+                
+                // Добавляем новый div в wrapperDiv
+                wrapperDiv.appendChild(newContentDiv);
 
             } else if (el.type === 'file') {
                 const previewImg = wrapperDiv.querySelector('img');
-                // Важно: dataset.jpeg берется из оригинального элемента формы, так как клон не будет иметь data-атрибутов файловых полей
-                const originalFileInput = document.getElementById(el.id);
+                const originalFileInput = document.getElementById(el.id); // Получаем оригинальный элемент для данных
                 const jpegData = originalFileInput ? originalFileInput.dataset?.jpeg : null;
+
+                // Удаляем оригинальные элементы из wrapperDiv
+                if (el) el.remove();
+                if (labelElement) labelElement.remove();
+                if (previewImg) previewImg.remove();
 
                 // Создаем div для отображения имени файла (если выбран)
                 const fileDisplayDiv = document.createElement('div');
@@ -724,16 +735,14 @@
                     img.style.pageBreakInside = 'avoid';
                     wrapperDiv.appendChild(img);
                 }
-
-                // Удаляем оригинальные элементы из wrapperDiv
-                if (el) el.remove(); // Удаляем поле ввода файла
-                if (labelElement) labelElement.remove(); // Удаляем метку поля ввода файла
-                if (previewImg) previewImg.remove(); // Удаляем предпросмотр изображения
             } else if (el.tagName === 'SELECT') {
-                // Для select-элементов берем выбранный текст из оригинальной формы, т.к. в клоне может быть неактуально
-                const originalSelect = document.getElementById(el.id);
+                const originalSelect = document.getElementById(el.id); // Получаем оригинальный select для значения
                 displayValue = originalSelect ? originalSelect.options[originalSelect.selectedIndex]?.text : '—';
                 
+                // Удаляем оригинальный select и его метку из wrapperDiv
+                if (el) el.remove();
+                if (labelElement) labelElement.remove();
+
                 const newContentDiv = document.createElement('div');
                 newContentDiv.style.marginBottom = "4px";
                 newContentDiv.style.padding = "4px 8px";
@@ -742,9 +751,17 @@
                 newContentDiv.style.backgroundColor = "#f9f9f9";
                 newContentDiv.style.fontSize = "13px";
                 newContentDiv.innerHTML = `<strong>${labelText}:</strong> ${displayValue}`;
-                wrapperDiv.replaceWith(newContentDiv);
-            } else { // Для текстовых полей и чисел
+                
+                // Добавляем новый div в wrapperDiv
+                wrapperDiv.appendChild(newContentDiv);
+
+            } else { // Для текстовых полей и чисел (input type="text", "number", "date", textarea)
                 displayValue = el.value || '—';
+                
+                // Удаляем оригинальный input/textarea и его метку из wrapperDiv
+                if (el) el.remove();
+                if (labelElement) labelElement.remove();
+
                 const newContentDiv = document.createElement('div');
                 newContentDiv.style.marginBottom = "4px";
                 newContentDiv.style.padding = "4px 8px";
@@ -753,7 +770,9 @@
                 newContentDiv.style.backgroundColor = "#f9f9f9";
                 newContentDiv.style.fontSize = "13px";
                 newContentDiv.innerHTML = `<strong>${labelText}:</strong> ${displayValue}`;
-                wrapperDiv.replaceWith(newContentDiv);
+                
+                // Добавляем новый div в wrapperDiv
+                wrapperDiv.appendChild(newContentDiv);
             }
         });
 
@@ -771,7 +790,9 @@
         allDynamicContainersClone.forEach(cloneContainer => {
             const dynamicElements = dynamicElementData[cloneContainer.id];
             if (dynamicElements && dynamicElements.length > 0) {
-                cloneContainer.innerHTML = ""; // Очищаем контейнер в клоне
+                // Очищаем существующее содержимое (например, поля ввода)
+                cloneContainer.innerHTML = ""; 
+                // Добавляем статический текст для каждого элемента
                 dynamicElements.forEach(entry => {
                     const elementDiv = document.createElement("div");
                     elementDiv.style.marginBottom = "2px";
@@ -779,9 +800,16 @@
                     cloneContainer.appendChild(elementDiv);
                 });
             } else {
-                cloneContainer.remove(); // Если динамических элементов нет, удаляем заголовок и контейнер
+                // Если динамических элементов нет, удаляем заголовок и контейнер
+                // Если контейнер имеет заголовок (например, h5), его тоже нужно удалить или скрыть
+                const h5Element = cloneContainer.previousElementSibling; // Проверяем предыдущий элемент
+                if (h5Element && h5Element.tagName === 'H5' && h5Element.textContent.includes('Анализируемые элементы')) {
+                    h5Element.remove();
+                }
+                cloneContainer.remove();
             }
         });
+
 
         const wrapper = document.createElement("div");
         // Эти стили делают обертку невидимой и вне потока документа,
@@ -832,7 +860,7 @@
 
     async function sendToGoogleSheet(formData, pdfBase64, installationPhotoDataUrl) {
         // Проверка и сообщение, если URL не установлен
-        if (!GOOGLE_SHEET_WEB_APP_URL) { // Условие изменено
+        if (!GOOGLE_SHEET_WEB_APP_URL) { // Условие изменено, чтобы просто проверять наличие URL
             console.error("GOOGLE_SHEET_WEB_APP_URL не установлен. Отправка в Google Sheet пропущена. Пожалуйста, обновите URL в коде Canvas.");
             alert("Ошибка: URL для Google Таблицы не настроен. Пожалуйста, обновите код Canvas с правильным URL веб-приложения Google Apps Script.");
             return;
