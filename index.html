@@ -475,16 +475,16 @@
                 </div>
             </div>
         </div>
-        <div class="mb-3 mt-4"> 
+        <div class="mb-3 mt-4">
             <!-- New checkboxes for attachment control -->
             <div class="form-check attachment-checkbox">
                 <input class="form-check-input" type="checkbox" id="sendPdf" checked>
                 <label class="form-check-label" for="sendPdf">Отправить PDF вложение</label>
             </div>
-            
+
             <button id="submit-button" type="button" class="btn btn-primary">Отправить</button>
         </div>
-        <div class="mt-3"> 
+        <div class="mt-3">
             <small class="text-muted"><span style="color: red;">*</span> - обязательные поля</small>
         </div>
     </form>
@@ -498,7 +498,7 @@
 <script>
     // URL для вашего Google Apps Script Web App.
     // Замените этот placeholder на фактический URL после развертывания скрипта.
-    const GOOGLE_SHEET_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbyZ_DnevKiT3qdXRiOC-ezsPRfiJ9mrFkTwVGmWgSwLS9s92cegzrxl7p8ZNApaFb35-Q/exec'; // <--- ОБНОВИТЕ ЭТУ СТРОКУ!
+    const GOOGLE_SHEET_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx7Pa7xOUkG5PrmZD-FtCyO8zgtXPjOcO4KMDm4fLQdOV6v3MIVSksZNAEVgRqm1wpF4w/exec'; // <--- ОБНОВИТЕ ЭТУ СТРОКУ!
 
     const dynamicElementData = {};
 
@@ -632,8 +632,8 @@
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onloadend = () => {
-                console.log("blobToBase64: FileReader result (Data URL start):", reader.result.substring(0, 100) + '...'); // Log start of Data URL
-                const base64String = reader.result.split(',')[1];
+                console.log("blobToBase64: FileReader result (Data URL start):", reader.result ? reader.result.substring(0, 100) + '...' : 'null or empty'); // Log start of Data URL, handle null
+                const base64String = reader.result ? reader.result.split(',')[1] : null; // Handle null result
                 if (!base64String) {
                     console.error("blobToBase64: Base64 string is empty or null after splitting.");
                     alert("Ошибка: Не удалось извлечь Base64 строку из PDF Blob.");
@@ -916,7 +916,7 @@
 
         const payload = {
             ...formData,
-            pdf_attachment_base64: pdfBase64 || '', 
+            pdf_attachment_base64: pdfBase64 || '',
             installation_photo_base64: installationPhotoDataUrl || ''
         };
 
@@ -966,7 +966,7 @@
         const material = materialSelect.value;
 
         let pdfBase64 = null;
-        let installationPhotoDataUrl = null; 
+        let installationPhotoDataUrl = null;
         let formDataForGoogleSheet = {};
 
         try {
@@ -989,7 +989,7 @@
                 const dynamicElements = dynamicElementData[id];
                 if (dynamicElements && dynamicElements.length > 0) {
                     // Store as stringified JSON to save in one cell in Google Sheet
-                    formDataForGoogleSheet[id] = JSON.stringify(dynamicElements); 
+                    formDataForGoogleSheet[id] = JSON.stringify(dynamicElements);
                 }
             });
             console.log("submitForm: Dynamic elements data collected.");
@@ -1021,7 +1021,7 @@
             } else {
                 console.log("submitForm: sendPdfCheckbox is NOT checked. Skipping PDF generation.");
             }
-            
+
             // --- Отправка в Google Sheet ---
             // Собираем все данные для Google Sheet.
             const googleSheetPayload = {
@@ -1033,8 +1033,8 @@
                 email: email, // Используем email напрямую
                 country: form.country.value || '',
                 location: form.location.value || '',
-                material_type: material, 
-                
+                material_type: material,
+
                 // Динамические элементы
                 'elements-ca-u': formDataForGoogleSheet['elements-ca-u'] || '',
                 'light-elements': formDataForGoogleSheet['light-elements'] || '',
@@ -1053,9 +1053,9 @@
                 ...Object.fromEntries(
                     Array.from(currentMaterialSection ? currentMaterialSection.querySelectorAll('input[type="checkbox"]') : []).map(el => [el.name, el.checked ? 'Да' : 'Нет'])
                 ),
-                
+
                 // Base64 вложения
-                pdf_attachment_base64: pdfBase64 || '', 
+                pdf_attachment_base64: pdfBase64 || '',
                 installation_photo_base64: installationPhotoDataUrl || ''
             };
 
