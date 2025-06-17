@@ -457,7 +457,7 @@
 <script>
     // URL для вашего Google Apps Script Web App.
     // Замените этот placeholder на фактический URL после развертывания скрипта.
-    const GOOGLE_SHEET_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx7Pa7xOUkG5PrmZD-FtCyO8zgtXPjOcO4KMDm4fLQdOV6v3MIVSksZNAEVgRqm1wpF4w/exec'; // ВНИМАНИЕ: ЗДЕСЬ ДОЛЖЕН БЫТЬ ВАШ АКТУАЛЬНЫЙ URL WEb-APP GOOGLE APPS SCRIPT
+    const GOOGLE_SHEET_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx7Pa7xOUkG5PrmZD-FtCyO8zgtXPjOcO4KMDm4fLQdOV6v3MIVSksZNAEVgRqm1wpF4w/exec'; // <--- ОБНОВИТЕ ЭТУ СТРОКУ!
 
     const dynamicElementData = {};
 
@@ -761,7 +761,7 @@
 
     async function sendToGoogleSheet(formData, pdfBase64, installationPhotoDataUrl) {
         // Проверка и сообщение, если URL не установлен
-        if (!GOOGLE_SHEET_WEB_APP_URL || GOOGLE_SHEET_WEB_APP_URL === 'https://script.google.com/macros/s/AKfycbx7Pa7xOUkG5PrmZD-FtCyO8zgtXPjOcO4KMDm4fLQdOV6v3MIVSksZNAEVgRqm1wpF4w/exec') {
+        if (!GOOGLE_SHEET_WEB_APP_URL || GOOGLE_SHEET_WEB_APP_URL === 'ВАШ_АКТУАЛЬНЫЙ_URL_ЗДЕСЬ') {
             console.error("GOOGLE_SHEET_WEB_APP_URL не установлен. Отправка в Google Sheet пропущена. Пожалуйста, обновите URL в коде Canvas.");
             alert("Ошибка: URL для Google Таблицы не настроен. Пожалуйста, обновите код Canvas с правильным URL веб-приложения Google Apps Script.");
             return;
