@@ -45,6 +45,35 @@
                 margin: 0 !important;
             }
         }
+        /* Стили для временного отладочного превью */
+        #debug-pdf-preview {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.9); /* Полупрозрачный белый фон */
+            z-index: 10000; /* Поверх всего */
+            overflow: auto;
+            padding: 20px;
+            box-sizing: border-box;
+            display: none; /* По умолчанию скрыто */
+            border: 5px solid red; /* Яркая рамка для отладки */
+        }
+        #debug-pdf-preview-content {
+            background: white;
+            padding: 20px;
+            border: 1px solid #ccc;
+            max-width: 210mm; /* Размер A4 */
+            margin: 20px auto;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+        }
+        #debug-pdf-preview button {
+            margin-top: 20px;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
     </style>
 </head>
 <body>
@@ -453,12 +482,20 @@
 
     <div id="error-message" class="alert alert-danger mt-3" style="display: none;"></div>
 
+    <!-- Debug PDF preview window -->
+    <div id="debug-pdf-preview">
+        <div id="debug-pdf-preview-content">
+            <!-- Content to be cloned for PDF will appear here -->
+        </div>
+        <button id="close-debug-preview" class="btn btn-secondary">Закрыть превью отладки</button>
+    </div>
+
 </div>
 
 <script>
     // URL для вашего Google Apps Script Web App.
     // Замените этот placeholder на фактический URL после развертывания скрипта.
-    const GOOGLE_SHEET_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx7Pa7xOUkG5PrmZD-FtCyO8zgtXPjOcO4KMDm4fLQdOV6v3MIVSksZNAEVgRqm1wpF4w/exec'; // Заменено на ваш URL
+    const GOOGLE_SHEET_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbx5Pa7xOUkG5PrmZD-FtCyO8zgtXPjOcO4KMDm4fLQdOV6v3MIVSksZNAEVgRqm1wpF4w/exec'; // Заменено на ваш URL
 
     const dynamicElementData = {};
 
@@ -575,6 +612,11 @@
                 await submitForm();
             });
         }
+
+        // Event listener for closing the debug preview
+        document.getElementById('close-debug-preview').addEventListener('click', () => {
+            document.getElementById('debug-pdf-preview').style.display = 'none';
+        });
     });
 
     async function blobToBase64(blob) {
@@ -592,7 +634,7 @@
         });
     }
 
-    function generateExcelBlob() {
+    function generateExcelBlob() { // This function is still present but not called from submitForm
         const form = document.getElementById("form");
         const material = form.material.value;
         const dataRows = [];
@@ -664,11 +706,14 @@
 
             if (el.type === "checkbox") {
                 div.textContent = el.checked ? "Да" : "Нет";
-                el.closest(".form-check").querySelector("label").setAttribute("data-checked", el.checked ? "✔" : "✖");
+                // Set a data attribute on the label for PDF rendering
+                const label = el.closest(".form-check").querySelector("label");
+                if (label) {
+                    label.setAttribute("data-checked", el.checked ? "✔" : "✖");
+                }
             } else if (el.tagName === "SELECT") {
                 div.textContent = el.options[el.selectedIndex]?.text || "—";
-            }
-            else {
+            } else {
                 div.textContent = el.value?.trim() || "—";
             }
             el.replaceWith(div);
@@ -679,9 +724,9 @@
         allDynamicContainers.forEach(id => {
             const originalBlock = document.getElementById(id);
             const cloneBlock = clone.querySelector(`#${id}`);
-            if (!originalBlock || !cloneBlock) return;
+            if (!originalBlock || !cloneBlock) return; // Ensure elements exist in both original and clone
 
-            cloneBlock.innerHTML = "";
+            cloneBlock.innerHTML = ""; // Clear existing elements in clone to re-add static ones
             const dynamicElements = dynamicElementData[id];
             if (dynamicElements) {
                 dynamicElements.forEach(entry => {
@@ -709,30 +754,52 @@
             }
         }
 
+        // --- PDF Debugging Feature ---
+        // Display the cloned content in a debug preview window
+        const debugPreviewContent = document.getElementById('debug-pdf-preview-content');
+        const debugPreviewWindow = document.getElementById('debug-pdf-preview');
+        debugPreviewContent.innerHTML = ''; // Clear previous content
+        debugPreviewContent.appendChild(clone.cloneNode(true)); // Append a fresh clone for preview
+        debugPreviewWindow.style.display = 'block'; // Show the debug window
+
+
         const wrapper = document.createElement("div");
-        wrapper.style.cssText = "position: absolute; top: -9999px; left: -9999px; width: 210mm; padding: 20px; background: white; opacity: 0; z-index: -1;";
+        // These styles make the wrapper effectively invisible and off-screen for html2canvas
+        // but still part of the DOM for rendering.
+        wrapper.style.cssText = "position: absolute; top: 0px; left: 0px; width: 210mm; padding: 20mm; box-sizing: border-box; background: white; z-index: -1;"; // Adjusted padding and z-index
+
+        // Append to body temporarily for html2canvas to render
         wrapper.appendChild(clone);
         document.body.appendChild(wrapper);
 
+
         const opt = {
             filename: 'oprosny_list.pdf',
-            html2canvas: { scale: 2, useCORS: true },
+            html2canvas: { 
+                scale: 2, 
+                useCORS: true,
+                logging: true // Enable html2canvas logging for debugging
+            },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' , margin: [10, 10, 10, 10] }, // Added margin
             pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
         };
 
         let pdfBlob;
         try {
+            // Delay PDF generation slightly to ensure debug preview is visible
+            await new Promise(resolve => setTimeout(resolve, 500)); 
             pdfBlob = await html2pdf().set(opt).from(wrapper).outputPdf('blob');
         } finally {
+            // Make sure the wrapper is removed after PDF generation
             if (document.body.contains(wrapper)) {
                 document.body.removeChild(wrapper);
             }
+            // debugPreviewWindow.style.display = 'none'; // Keep debug window open for user inspection
         }
         return pdfBlob;
     }
 
-    async function sendToGoogleSheet(formData, pdfBase64, excelBase64, installationPhotoDataUrl) {
+    async function sendToGoogleSheet(formData, pdfBase64, installationPhotoDataUrl) { // Removed excelBase64 parameter
         if (!GOOGLE_SHEET_WEB_APP_URL || GOOGLE_SHEET_WEB_APP_URL === 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE') {
             console.error("GOOGLE_SHEET_WEB_APP_URL не установлен. Отправка в Google Sheet пропущена.");
             return;
@@ -741,7 +808,6 @@
         const payload = {
             ...formData,
             pdf_attachment_base64: pdfBase64 || '', // Add PDF Base64
-            // excel_attachment_base64: excelBase64 || '', // Removed Excel Base64
             installation_photo_base64: installationPhotoDataUrl || '' // Add photo Base64
         };
 
@@ -775,7 +841,6 @@
         const materialSelect = form.material;
         const errorMessageDiv = document.getElementById("error-message");
         const sendPdfCheckbox = document.getElementById("sendPdf");
-        // const sendExcelCheckbox = document.getElementById("sendExcel"); // Removed Excel checkbox
 
         errorMessageDiv.style.display = 'none';
         errorMessageDiv.textContent = '';
@@ -793,9 +858,7 @@
         const material = materialSelect.value;
 
         let pdfBase64 = null;
-        let excelBase64 = null; // Still declare, but won't be generated
         let installationPhotoDataUrl = null; 
-        // let emailJsAttachments = []; // Удалено, так как EmailJS больше не используется
         let formDataForGoogleSheet = {};
 
         try {
@@ -831,7 +894,7 @@
                 }
             }
 
-            // Generate PDF and Excel if selected
+            // Generate PDF if selected
             if (sendPdfCheckbox.checked) {
                 const pdfBlob = await generatePDFBlob();
                 pdfBase64 = await blobToBase64(pdfBlob);
@@ -843,9 +906,6 @@
                     // errorMessageDiv.style.display = 'block';
                 }
             }
-
-            // The Excel generation logic is now entirely removed since the checkbox is gone.
-            // if (sendExcelCheckbox.checked) { ... }
             
             // --- Отправка в Google Sheet ---
             // Собираем все данные для Google Sheet.
@@ -881,11 +941,10 @@
                 
                 // Base64 вложения
                 pdf_attachment_base64: pdfBase64 || '',
-                // excel_attachment_base64: excelBase64 || '', // Removed Excel Base64 from payload
                 installation_photo_base64: installationPhotoDataUrl || ''
             };
 
-            await sendToGoogleSheet(googleSheetPayload, pdfBase64, excelBase64, installationPhotoDataUrl);
+            await sendToGoogleSheet(googleSheetPayload, pdfBase64, installationPhotoDataUrl);
 
         } catch (err) {
             console.error("Критическая ошибка при отправке формы:", err);
