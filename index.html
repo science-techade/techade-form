@@ -681,7 +681,7 @@
                 // Заменяем весь form-check div
                 const newContentDiv = document.createElement('div');
                 newContentDiv.style.marginBottom = "4px";
-                newContentDiv.style.padding = "4px 8px";
+                newContentDiv.style.padding = "44px 8px";
                 newContentDiv.style.border = "1px solid #ccc";
                 newContentDiv.style.borderRadius = "3px";
                 newContentDiv.style.backgroundColor = "#f9f9f9";
@@ -832,7 +832,7 @@
 
     async function sendToGoogleSheet(formData, pdfBase64, installationPhotoDataUrl) {
         // Проверка и сообщение, если URL не установлен
-        if (!GOOGLE_SHEET_WEB_APP_URL || GOOGLE_SHEET_WEB_APP_URL === 'https://script.google.com/macros/s/AKfycbx7Pa7xOUkG5PrmZD-FtCyO8zgtXPjOcO4KMDm4fLQdOV6v3MIVSksZNAEVgRqm1wpF4w/exec') {
+        if (!GOOGLE_SHEET_WEB_APP_URL) { // Условие изменено
             console.error("GOOGLE_SHEET_WEB_APP_URL не установлен. Отправка в Google Sheet пропущена. Пожалуйста, обновите URL в коде Canvas.");
             alert("Ошибка: URL для Google Таблицы не настроен. Пожалуйста, обновите код Canvas с правильным URL веб-приложения Google Apps Script.");
             return;
