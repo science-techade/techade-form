@@ -34,20 +34,20 @@
             content: " *";
             color: red;
         }
-        /* Стили для контейнера, который используется для генерации PDF, чтобы он был невидимым */
-        /* ВРЕМЕННЫЕ СТИЛИ ДЛЯ ОТЛАДКИ - СДЕЛАЙТЕ ВИДИМЫМ */
+        /* Стили для контейнера, который используется для генерации PDF (ВРЕМЕННО ВИДИМЫЙ ДЛЯ ОТЛАДКИ) */
         .pdf-render-container {
-            position: relative; /* Изменено: relative, чтобы появлялся в потоке документа */
-            margin: 20px auto;  /* Изменено: центрируем для видимости */
-            border: 2px solid red; /* Изменено: добавляем красную рамку для видимости */
-            width: 210mm; /* Ширина A4 */
-            min-height: 297mm; /* Минимальная высота A4, чтобы было место для прокрутки */
+            position: fixed; /* Прибиваем к окну просмотра */
+            top: 0;
+            left: 0;
+            width: 100vw; /* Занимаем всю ширину окна */
+            height: 100vh; /* Занимаем всю высоту окна */
+            border: 5px solid red; /* Очень заметная красная рамка */
             padding: 20mm; /* Отступы для содержимого PDF */
             box-sizing: border-box;
-            background: white;
-            z-index: 1000; /* Изменено: чтобы быть поверх других элементов */
-            overflow: visible; /* Изменено: показываем контент, даже если он выходит за границы */
-            /* Удалены: opacity: 0; left: -9999px; top: -9999px; pointer-events: none; */
+            background: white; /* Белый фон, чтобы перекрывать остальное */
+            z-index: 9999; /* Поверх всех остальных элементов */
+            overflow-y: auto; /* Включаем прокрутку, если содержимое длинное */
+            display: block; /* Убеждаемся, что он всегда виден */
         }
 
         /* Стили для статических блоков в PDF */
@@ -87,7 +87,6 @@
     <h2 class="mb-4">Опросный лист по техпроцессу</h2>
     <form id="form">
         <div id="pdf-content">
-            <!-- Hidden input for pdf_data is no longer needed in the visible form content -->
             <div class="mb-4">
                 <h5>Основные сведения</h5>
                 <div class="mb-3">
@@ -676,20 +675,31 @@
     }
 
     async function generatePDFBlob() {
+        console.log("generatePDFBlob: Starting PDF content generation.");
         const form = document.getElementById("form");
         const materialType = form.material.value;
 
         // Создаем контейнер, который будет содержать HTML для PDF
-        const pdfRenderContainer = document.createElement('div');
-        pdfRenderContainer.className = 'pdf-render-container';
-        pdfRenderContainer.innerHTML = '<h3>Предварительный просмотр PDF (для отладки)</h3><hr>'; // Временное сообщение для отладки
-        document.body.appendChild(pdfRenderContainer);
+        let pdfRenderContainer = document.getElementById('debug-pdf-render-container');
+        if (!pdfRenderContainer) {
+            pdfRenderContainer = document.createElement('div');
+            pdfRenderContainer.id = 'debug-pdf-render-container'; // Добавляем ID для легкого поиска
+            pdfRenderContainer.className = 'pdf-render-container';
+            document.body.appendChild(pdfRenderContainer);
+            console.log("generatePDFBlob: pdfRenderContainer created and appended to body.");
+        } else {
+            console.log("generatePDFBlob: pdfRenderContainer already exists, reusing.");
+        }
+        
+        pdfRenderContainer.innerHTML = '<h3><strong style="color: red;">ЭТО БЛОК ПРЕДПРОСМОТРА PDF (ДЛЯ ОТЛАДКИ!)</strong></h3><hr>'; // Временное сообщение для отладки
+        console.log("generatePDFBlob: Initial debug message added to pdfRenderContainer.");
 
         // Добавляем заголовок формы
         const formTitle = document.createElement('h2');
         formTitle.className = 'pdf-section-title';
         formTitle.textContent = 'Опросный лист по техпроцессу';
         pdfRenderContainer.appendChild(formTitle);
+        console.log("generatePDFBlob: Form title added.");
 
         // --- Обработка основных сведений ---
         const mainInfoSection = document.createElement('div');
@@ -716,9 +726,12 @@
                 displayDiv.className = 'pdf-field-display';
                 displayDiv.innerHTML = `<strong>${field.label.replace('*', '').trim()}:</strong> ${inputElement.value || '—'}`;
                 mainInfoSection.appendChild(displayDiv);
+            } else {
+                console.warn(`generatePDFBlob: Main field element not found: ${field.id}`);
             }
         });
         pdfRenderContainer.appendChild(mainInfoSection);
+        console.log("generatePDFBlob: Main info fields processed.");
 
         // --- Тип анализируемого материала ---
         const materialSelect = document.getElementById('material');
@@ -727,7 +740,10 @@
             displayDiv.className = 'pdf-field-display';
             displayDiv.innerHTML = `<strong>Тип анализируемого материала:</strong> ${materialSelect.options[materialSelect.selectedIndex]?.text || '—'}`;
             pdfRenderContainer.appendChild(displayDiv);
+        } else {
+            console.warn("generatePDFBlob: Material select element not found.");
         }
+        console.log("generatePDFBlob: Material type processed.");
 
         // --- Обработка секции анализатора ---
         const activeSectionId = `section-${materialType}`;
@@ -738,6 +754,7 @@
             sectionTitle.className = 'pdf-section-title';
             sectionTitle.textContent = activeSection.querySelector('h5')?.textContent || 'Детали анализатора';
             pdfRenderContainer.appendChild(sectionTitle);
+            console.log(`generatePDFBlob: Active section (${materialType}) title added.`);
 
             // Собираем все поля из активной секции
             activeSection.querySelectorAll('input, select, textarea').forEach(el => {
@@ -749,7 +766,7 @@
                 displayDiv.className = 'pdf-field-display';
 
                 const labelElement = el.closest('.mb-3')?.querySelector('label') || el.closest('.form-check')?.querySelector('label');
-                const labelText = labelElement ? labelElement.textContent.trim().replace('*', '') : el.name; // Fallback to name if no label
+                const labelText = labelElement ? labelElement.textContent.trim().replace('*', '') : el.name;
 
                 if (el.type === 'checkbox') {
                     displayDiv.innerHTML = `<strong>${labelText}:</strong> ${el.checked ? 'Да' : 'Нет'}`;
@@ -768,6 +785,9 @@
                         img.style.border = '1px solid #ddd';
                         img.style.pageBreakInside = 'avoid';
                         pdfRenderContainer.appendChild(img);
+                        console.log(`generatePDFBlob: Image for ${el.id} added.`);
+                    } else {
+                        console.log(`generatePDFBlob: No image data for file input ${el.id}`);
                     }
                 } else if (el.tagName === 'SELECT') {
                     const originalSelect = document.getElementById(el.id);
@@ -778,10 +798,11 @@
                 }
                 pdfRenderContainer.appendChild(displayDiv);
             });
+            console.log("generatePDFBlob: Active section fields processed.");
 
             // Обработка динамических элементов (Ca до U, легкие элементы)
             activeSection.querySelectorAll('div[id$="elements-ca-u"], div[id$="light-elements"]').forEach(originalDynamicContainer => {
-                saveDynamicValues(originalDynamicContainer.id); // Убеждаемся, что данные актуальны
+                saveDynamicValues(originalDynamicContainer.id);
                 const dynamicElements = dynamicElementData[originalDynamicContainer.id];
 
                 if (dynamicElements && dynamicElements.length > 0) {
@@ -789,6 +810,7 @@
                     dynamicSectionTitle.className = 'pdf-sub-section-title';
                     dynamicSectionTitle.textContent = originalDynamicContainer.previousElementSibling?.textContent || 'Элементы';
                     pdfRenderContainer.appendChild(dynamicSectionTitle);
+                    console.log(`generatePDFBlob: Dynamic section title added for ${originalDynamicContainer.id}.`);
 
                     dynamicElements.forEach(entry => {
                         const elementDiv = document.createElement('div');
@@ -796,38 +818,20 @@
                         elementDiv.textContent = `Элемент: ${entry.element || '—'}, Диапазон: ${entry.range || '—'}`;
                         pdfRenderContainer.appendChild(elementDiv);
                     });
+                    console.log(`generatePDFBlob: Dynamic elements for ${originalDynamicContainer.id} processed.`);
+                } else {
+                    console.log(`generatePDFBlob: No dynamic elements found for ${originalDynamicContainer.id}.`);
                 }
             });
+        } else {
+            console.warn(`generatePDFBlob: Active section with ID ${activeSectionId} not found.`);
         }
         
-        const opt = {
-            filename: 'oprosny_list.pdf',
-            html2canvas: { 
-                scale: 2, 
-                useCORS: true,
-                logging: true,
-                windowWidth: pdfRenderContainer.scrollWidth > 0 ? pdfRenderContainer.scrollWidth : 210 * (96 / 25.4),
-                windowHeight: pdfRenderContainer.scrollHeight > 0 ? pdfRenderContainer.scrollHeight : 297 * (96 / 25.4)
-            },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' , margin: [10, 10, 10, 10] }, 
-            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
-        };
-
-        let pdfBlob = null; // Инициализируем null
-        try {
-            // Небольшая задержка, чтобы браузер успел отрендерить невидимую обертку
-            await new Promise(resolve => setTimeout(resolve, 300));
-            // Здесь мы НЕ будем вызывать html2pdf, а просто вернем null для отладки
-            // pdfBlob = await html2pdf().set(opt).from(pdfRenderContainer).outputPdf('blob');
-            console.log("PDF generation skipped for debugging purposes. Check the red box on the page.");
-        } finally {
-            // Удаляем временную обертку из DOM после генерации PDF
-            // В режиме отладки мы ее не удаляем, чтобы пользователь мог ее видеть
-            // if (document.body.contains(pdfRenderContainer)) {
-            //     document.body.removeChild(pdfRenderContainer);
-            // }
-        }
-        return pdfBlob; // Вернем null, чтобы не пытаться отправить пустой PDF
+        // В ЭТОМ РЕЖИМЕ ОТЛАДКИ МЫ НЕ ГЕНЕРИРУЕМ PDF.
+        // Вместо этого, контейнер pdfRenderContainer остается на странице,
+        // чтобы вы могли увидеть его содержимое.
+        console.log("generatePDFBlob: PDF generation skipped for debugging purposes. Check the red box on the page.");
+        return null; // Возвращаем null, так как PDF не был сгенерирован
     }
 
     async function sendToGoogleSheet(formData, pdfBase64, installationPhotoDataUrl) {
@@ -837,16 +841,16 @@
             alert("Ошибка: URL для Google Таблицы не настроен. Пожалуйста, обновите код Canvas с правильным URL веб-приложения Google Apps Script.");
             return;
         }
+        console.log("sendToGoogleSheet: Attempting to send data to Google Sheet.");
 
         const payload = {
             ...formData,
-            // В режиме отладки pdf_attachment_base64 будет пустым
             pdf_attachment_base64: pdfBase64 || '', 
             installation_photo_base64: installationPhotoDataUrl || ''
         };
 
         try {
-            console.log("Отправка данных в Google Sheet:", payload);
+            console.log("sendToGoogleSheet: Sending data:", payload);
             const response = await fetch(GOOGLE_SHEET_WEB_APP_URL, {
                 method: 'POST',
                 headers: {
@@ -856,16 +860,17 @@
                 mode: 'no-cors'
             });
 
-            console.log("Запрос в Google Sheet отправлен. Ответ (может быть пустым из-за no-cors mode):", response);
+            console.log("sendToGoogleSheet: Request sent. Response (may be empty due to no-cors mode):", response);
             alert("Данные отправлены!");
 
         } catch (error) {
-            console.error("Ошибка при отправке в Google Sheet:", error);
+            console.error("sendToGoogleSheet: Error sending to Google Sheet:", error);
             alert("Ошибка при отправке данных. Проверьте подключение к интернету или попробуйте позже.");
         }
     }
 
     async function submitForm() {
+        console.log("submitForm: Function started.");
         const form = document.getElementById("form");
         const emailInput = form.email;
         const materialSelect = form.material;
@@ -881,8 +886,10 @@
             errorMessageDiv.textContent = "Пожалуйста, заполните все обязательные поля формы.";
             errorMessageDiv.style.display = 'block';
             form.reportValidity();
+            console.log("submitForm: Form validation failed.");
             return;
         }
+        console.log("submitForm: Form validation passed.");
 
         const email = emailInput.value;
         const material = materialSelect.value;
@@ -902,6 +909,7 @@
                     formDataForGoogleSheet[element.name] = element.checked;
                 }
             }
+            console.log("submitForm: General form data collected.");
 
             // Get dynamic elements data
             const allDynamicContainers = Array.from(document.querySelectorAll('div[id$="elements-ca-u"], div[id$="light-elements"], div[id$="sinter-elements-ca-u"], div[id$="multiplex-elements-ca-u"], div[id$="multiplex-light-elements"], div[id$="courier-elements-ca-u"], div[id$="courier-light-elements"]')).map(el => el.id);
@@ -913,6 +921,7 @@
                     formDataForGoogleSheet[id] = JSON.stringify(dynamicElements); 
                 }
             });
+            console.log("submitForm: Dynamic elements data collected.");
 
             // Get the current material type to retrieve the correct photo data
             const currentMaterialSection = document.querySelector(`.analyzer-section[style*="block"]`);
@@ -920,13 +929,20 @@
                 const photoInput = currentMaterialSection.querySelector('input[type="file"]');
                 if (photoInput && photoInput.dataset.jpeg) {
                     installationPhotoDataUrl = photoInput.dataset.jpeg;
-                    console.log("Photo Data URL to be sent:", installationPhotoDataUrl.substring(0, 100) + '...');
+                    console.log("submitForm: Photo Data URL to be sent:", installationPhotoDataUrl.substring(0, 100) + '...');
+                } else {
+                    console.log("submitForm: No photo data or photo input found for current section.");
                 }
+            } else {
+                console.warn("submitForm: No active material section found.");
             }
 
-            // Generate PDF if selected - теперь это временно отключено для отладки
+            // Generate PDF if selected - ТЕПЕРЬ ЭТО ВРЕМЕННО ОТКЛЮЧЕНО ДЛЯ ОТЛАДКИ!
             if (sendPdfCheckbox.checked) {
+                console.log("submitForm: sendPdfCheckbox is checked. Calling generatePDFBlob (debugging mode).");
                 pdfBase64 = await generatePDFBlob(); // generatePDFBlob теперь просто отображает HTML и возвращает null
+            } else {
+                console.log("submitForm: sendPdfCheckbox is NOT checked. Skipping PDF generation.");
             }
             
             // --- Отправка в Google Sheet ---
@@ -954,11 +970,11 @@
                 // Поля специфичных секций (например, pulp_streams)
                 // Собираем данные из активной секции
                 ...Object.fromEntries(
-                    Array.from(currentMaterialSection.querySelectorAll('input:not([type="file"]):not([type="checkbox"]), select, textarea')).map(el => [el.name, el.value])
+                    Array.from(currentMaterialSection ? currentMaterialSection.querySelectorAll('input:not([type="file"]):not([type="checkbox"]), select, textarea') : []).map(el => [el.name, el.value])
                 ),
                 // Чекбоксы из активной секции
                 ...Object.fromEntries(
-                    Array.from(currentMaterialSection.querySelectorAll('input[type="checkbox"]')).map(el => [el.name, el.checked ? 'Да' : 'Нет'])
+                    Array.from(currentMaterialSection ? currentMaterialSection.querySelectorAll('input[type="checkbox"]') : []).map(el => [el.name, el.checked ? 'Да' : 'Нет'])
                 ),
                 
                 // Base64 вложения - pdfBase64 будет null в режиме отладки
@@ -966,10 +982,12 @@
                 installation_photo_base64: installationPhotoDataUrl || ''
             };
 
+            // !!! ВРЕМЕННО ОТКЛЮЧЕНО EmailJS ДЛЯ ОТЛАДКИ PDF !!!
             await sendToGoogleSheet(googleSheetPayload, pdfBase64, installationPhotoDataUrl);
+            console.log("submitForm: sendToGoogleSheet called.");
 
         } catch (err) {
-            console.error("Критическая ошибка при отправке формы:", err);
+            console.error("submitForm: Критическая ошибка при отправке формы:", err);
             errorMessageDiv.textContent = `Критическая ошибка: ${err.message || "Неизвестная ошибка."} Пожалуйста, попробуйте еще раз или обратитесь в поддержку.`;
             errorMessageDiv.style.display = 'block';
         }
