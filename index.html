@@ -1002,7 +1002,7 @@
                 pdfBase64 = await generatePDFBlob();
                 // Ensure pdfBase64 is a string, even if empty
                 pdfBase64 = pdfBase64 || ''; 
-                if (pdfBase64) {
+                if (pdfBase64.length > 0) { // Check length after assignment
                     console.log("submitForm: PDF Base64 generated. Length:", pdfBase64.length);
                 } else {
                     console.error("submitForm: PDF generation failed or returned null or empty. PDF will not be attached.");
@@ -1043,9 +1043,9 @@
                 installation_photo_base64: installationPhotoDataUrl || ''
             };
 
-            console.warn("sendToGoogleSheet: ВНИМАНИЕ: Отправка данных в Google Apps Script временно ОТКЛЮЧЕНА для диагностики CORS. Проверьте консоль.");
-            // await sendToGoogleSheet(googleSheetPayload, pdfBase64, installationPhotoDataUrl); // ВРЕМЕННО ЗАКОММЕНТИРОВАНО ДЛЯ ДИАГНОСТИКИ
-            // console.log("submitForm: sendToGoogleSheet called.");
+            console.log("sendToGoogleSheet: Отправка данных в Google Apps Script."); // Изменено на обычный лог
+            await sendToGoogleSheet(googleSheetPayload, pdfBase64, installationPhotoDataUrl); // РАСКОММЕНТИРОВАНО
+            console.log("submitForm: sendToGoogleSheet called.");
 
         } catch (err) {
             console.error("submitForm: Критическая ошибка при обработке формы:", err);
