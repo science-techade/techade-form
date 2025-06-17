@@ -34,10 +34,48 @@
             content: " *";
             color: red;
         }
-        /* Класс для элементов, которые должны быть невидимыми только при генерации PDF */
-        /* Этот класс будет добавляться/удаляться динамически, он не должен быть жестко применен в HTML */
-        .pdf-hide {
-            display: none !important;
+        /* Стили для контейнера, который используется для генерации PDF, чтобы он был невидимым */
+        .pdf-render-container {
+            position: absolute;
+            left: -9999px; /* Скрываем за пределами экрана */
+            top: -9999px;
+            width: 210mm; /* Ширина A4 */
+            min-height: 297mm; /* Минимальная высота A4, чтобы было место для прокрутки */
+            padding: 20mm; /* Отступы для содержимого PDF */
+            box-sizing: border-box;
+            background: white;
+            z-index: -1000;
+            overflow: hidden; /* Скрываем скроллбары */
+        }
+
+        /* Стили для статических блоков в PDF */
+        .pdf-field-display {
+            margin-bottom: 4px;
+            padding: 4px 8px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            background-color: #f9f9f9;
+            font-size: 13px;
+        }
+        .pdf-h5 {
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 1.25rem;
+            font-weight: 500;
+        }
+        .pdf-section-title {
+            margin-top: 25px;
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+            font-weight: 600;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 5px;
+        }
+        .pdf-sub-section-title {
+             margin-top: 15px;
+             margin-bottom: 8px;
+             font-size: 1.1rem;
+             font-weight: 500;
         }
     </style>
 </head>
@@ -636,159 +674,138 @@
     }
 
     async function generatePDFBlob() {
-        const pdfContentOriginal = document.getElementById("pdf-content");
-        const pdfContentClone = pdfContentOriginal.cloneNode(true); // Глубокое клонирование
+        const form = document.getElementById("form");
+        const materialType = form.material.value;
 
-        // Скрываем кнопки добавления/удаления элементов в клоне
-        pdfContentClone.querySelectorAll('.element-row button, .btn-outline-primary').forEach(button => {
-            button.remove(); // Удаляем кнопки из клона
-        });
+        // Создаем контейнер, который будет содержать HTML для PDF
+        const pdfRenderContainer = document.createElement('div');
+        pdfRenderContainer.className = 'pdf-render-container';
+        document.body.appendChild(pdfRenderContainer);
+
+        // Добавляем заголовок формы
+        const formTitle = document.createElement('h2');
+        formTitle.className = 'pdf-section-title';
+        formTitle.textContent = 'Опросный лист по техпроцессу';
+        pdfRenderContainer.appendChild(formTitle);
+
+        // --- Обработка основных сведений ---
+        const mainInfoSection = document.createElement('div');
+        mainInfoSection.className = 'mb-4';
+        const mainInfoTitle = document.createElement('h5');
+        mainInfoTitle.className = 'pdf-h5';
+        mainInfoTitle.textContent = 'Основные сведения';
+        mainInfoSection.appendChild(mainInfoTitle);
         
-        // Убеждаемся, что только выбранная секция анализатора видна в клоне
-        const materialType = document.getElementById('material').value; // Берем значение из оригинальной формы
-        pdfContentClone.querySelectorAll('.analyzer-section').forEach(section => {
-            if (section.id !== `section-${materialType}`) {
-                section.style.display = 'none';
+        const mainFields = [
+            { id: 'date', label: 'Дата заполнения опросного листа', type: 'text' }, // type changed to text for consistent display
+            { id: 'company', label: 'Название компании', type: 'text' },
+            { id: 'contact_person', label: 'Контактное лицо', type: 'text' },
+            { id: 'phone', label: 'Телефон', type: 'text' },
+            { id: 'email', label: 'Email', type: 'text' },
+            { id: 'country', label: 'Страна', type: 'text' },
+            { id: 'location', label: 'Местонахождение', type: 'text' }
+        ];
+
+        mainFields.forEach(field => {
+            const inputElement = document.getElementById(field.id);
+            if (inputElement) {
+                const displayDiv = document.createElement('div');
+                displayDiv.className = 'pdf-field-display';
+                displayDiv.innerHTML = `<strong>${field.label.replace('*', '').trim()}:</strong> ${inputElement.value || '—'}`;
+                mainInfoSection.appendChild(displayDiv);
             }
         });
+        pdfRenderContainer.appendChild(mainInfoSection);
 
-        // Обрабатываем поля формы в клоне: заменяем их статическим текстом
-        pdfContentClone.querySelectorAll('input, select, textarea').forEach(el => {
-            // Исключаем скрытые поля, которые не должны отображаться в PDF
-            if (el.type === 'hidden') {
-                el.remove();
-                return;
-            }
-
-            const wrapperDiv = el.closest('.mb-3') || el.closest('.form-check'); // Находим родительский div для замены
-            
-            if (!wrapperDiv) {
-                // Если wrapperDiv не найден (например, для элементов, не обернутых в mb-3 или form-check)
-                // Просто заменяем сам элемент на текстовый div
-                const tempDiv = document.createElement('div');
-                tempDiv.textContent = el.value || '—';
-                el.replaceWith(tempDiv);
-                return;
-            }
-            
-            const labelElement = wrapperDiv.querySelector('label');
-            const labelText = labelElement ? labelElement.textContent.trim().replace('*', '') : '';
-            let displayValue = '';
-
-            // Создаем временный div для отображения значения
+        // --- Тип анализируемого материала ---
+        const materialSelect = document.getElementById('material');
+        if (materialSelect) {
             const displayDiv = document.createElement('div');
-            displayDiv.style.marginBottom = "4px";
-            displayDiv.style.padding = "4px 8px";
-            displayDiv.style.border = "1px solid #ccc";
-            displayDiv.style.borderRadius = "3px";
-            displayDiv.style.backgroundColor = "#f9f9f9";
-            displayDiv.style.fontSize = "13px";
+            displayDiv.className = 'pdf-field-display';
+            displayDiv.innerHTML = `<strong>Тип анализируемого материала:</strong> ${materialSelect.options[materialSelect.selectedIndex]?.text || '—'}`;
+            pdfRenderContainer.appendChild(displayDiv);
+        }
 
-            if (el.type === 'checkbox') {
-                displayValue = el.checked ? 'Да' : 'Нет';
-                displayDiv.innerHTML = `<strong>${labelText}:</strong> ${displayValue}`;
-            } else if (el.type === 'file') {
-                const originalFileInput = document.getElementById(el.id); // Получаем оригинальный элемент для данных
-                const jpegData = originalFileInput ? originalFileInput.dataset?.jpeg : null;
+        // --- Обработка секции анализатора ---
+        const activeSectionId = `section-${materialType}`;
+        const activeSection = document.getElementById(activeSectionId);
 
-                displayDiv.innerHTML = `<strong>${labelText}:</strong> ${originalFileInput && originalFileInput.files && originalFileInput.files.length > 0 ? originalFileInput.files[0].name : '—'}`;
-                
-                // Для файла, изображение будет добавлено отдельно после displayDiv
-                if (jpegData) {
-                    const img = document.createElement("img");
-                    img.src = jpegData;
-                    img.style.maxWidth = "100%";
-                    img.style.height = "auto";
-                    img.style.marginTop = "5px";
-                    img.style.border = "1px solid #ddd";
-                    img.style.pageBreakInside = 'avoid';
-                    wrapperDiv.appendChild(img); // Добавляем изображение
+        if (activeSection) {
+            const sectionTitle = document.createElement('h5');
+            sectionTitle.className = 'pdf-section-title';
+            sectionTitle.textContent = activeSection.querySelector('h5')?.textContent || 'Детали анализатора';
+            pdfRenderContainer.appendChild(sectionTitle);
+
+            // Собираем все поля из активной секции
+            activeSection.querySelectorAll('input, select, textarea').forEach(el => {
+                if (el.type === 'hidden' || el.tagName === 'BUTTON') {
+                    return;
                 }
 
-            } else if (el.tagName === 'SELECT') {
-                const originalSelect = document.getElementById(el.id); // Получаем оригинальный select для значения
-                displayValue = originalSelect ? originalSelect.options[originalSelect.selectedIndex]?.text : '—';
-                displayDiv.innerHTML = `<strong>${labelText}:</strong> ${displayValue}`;
-            } else { // Для текстовых полей и чисел (input type="text", "number", "date", textarea)
-                displayValue = el.value || '—';
-                displayDiv.innerHTML = `<strong>${labelText}:</strong> ${displayValue}`;
-            }
+                const displayDiv = document.createElement('div');
+                displayDiv.className = 'pdf-field-display';
 
-            // Добавляем displayDiv в wrapperDiv
-            wrapperDiv.appendChild(displayDiv);
+                const labelElement = el.closest('.mb-3')?.querySelector('label') || el.closest('.form-check')?.querySelector('label');
+                const labelText = labelElement ? labelElement.textContent.trim().replace('*', '') : el.name; // Fallback to name if no label
 
-            // Удаляем оригинальные интерактивные элементы из wrapperDiv
-            if (el) el.remove();
-            if (labelElement) labelElement.remove();
-            // Удаляем previewImg только если это поле типа 'file' и previewImg существует
-            if (el.type === 'file' && wrapperDiv.querySelector('img')) {
-                wrapperDiv.querySelector('img').remove();
-            }
-        });
-
-        // Теперь обрабатываем динамические элементы:
-        // В клоне уже есть их div.element-row, но нужно убедиться, что они корректно отображаются.
-        // Кнопки добавления/удаления уже были удалены в начале функции.
-        // Сохраняем значения динамических элементов из оригинальной формы перед клонированием.
-        const allDynamicContainersOriginal = document.querySelectorAll('div[id$="elements-ca-u"], div[id$="light-elements"], div[id$="sinter-elements-ca-u"], div[id$="multiplex-elements-ca-u"], div[id$="multiplex-light-elements"], div[id$="courier-elements-ca-u"], div[id$="courier-light-elements"]');
-        allDynamicContainersOriginal.forEach(originalContainer => {
-            saveDynamicValues(originalContainer.id); // Убеждаемся, что данные актуальны
-        });
-
-        // Заполняем динамические элементы в клоне
-        const allDynamicContainersClone = pdfContentClone.querySelectorAll('div[id$="elements-ca-u"], div[id$="light-elements"], div[id$="sinter-elements-ca-u"], div[id$="multiplex-elements-ca-u"], div[id$="multiplex-light-elements"], div[id$="courier-elements-ca-u"], div[id$="courier-light-elements"]');
-        allDynamicContainersClone.forEach(cloneContainer => {
-            const dynamicElements = dynamicElementData[cloneContainer.id];
-            if (dynamicElements && dynamicElements.length > 0) {
-                // Очищаем существующее содержимое (например, поля ввода)
-                cloneContainer.innerHTML = ""; 
-                // Добавляем статический текст для каждого элемента
-                dynamicElements.forEach(entry => {
-                    const elementDiv = document.createElement("div");
-                    elementDiv.style.marginBottom = "2px";
-                    elementDiv.textContent = `${entry.element || "—"} — ${entry.range || "—"}`;
-                    cloneContainer.appendChild(elementDiv);
-                });
-            } else {
-                // Если динамических элементов нет, удаляем заголовок и контейнер
-                // Если контейнер имеет заголовок (например, h5), его тоже нужно удалить или скрыть
-                const h5Element = cloneContainer.previousElementSibling; // Проверяем предыдущий элемент
-                if (h5Element && h5Element.tagName === 'H5' && h5Element.textContent.includes('Анализируемые элементы')) {
-                    h5Element.remove();
+                if (el.type === 'checkbox') {
+                    displayDiv.innerHTML = `<strong>${labelText}:</strong> ${el.checked ? 'Да' : 'Нет'}`;
+                } else if (el.type === 'file') {
+                    const originalFileInput = document.getElementById(el.id);
+                    const fileName = originalFileInput && originalFileInput.files && originalFileInput.files.length > 0 ? originalFileInput.files[0].name : '—';
+                    displayDiv.innerHTML = `<strong>${labelText}:</strong> ${fileName}`;
+                    
+                    const jpegData = originalFileInput ? originalFileInput.dataset?.jpeg : null;
+                    if (jpegData) {
+                        const img = document.createElement('img');
+                        img.src = jpegData;
+                        img.style.maxWidth = '100%';
+                        img.style.height = 'auto';
+                        img.style.marginTop = '5px';
+                        img.style.border = '1px solid #ddd';
+                        img.style.pageBreakInside = 'avoid';
+                        pdfRenderContainer.appendChild(img);
+                    }
+                } else if (el.tagName === 'SELECT') {
+                    const originalSelect = document.getElementById(el.id);
+                    const selectedText = originalSelect ? originalSelect.options[originalSelect.selectedIndex]?.text : '—';
+                    displayDiv.innerHTML = `<strong>${labelText}:</strong> ${selectedText}`;
+                } else {
+                    displayDiv.innerHTML = `<strong>${labelText}:</strong> ${el.value || '—'}`;
                 }
-                cloneContainer.remove();
-            }
-        });
+                pdfRenderContainer.appendChild(displayDiv);
+            });
 
+            // Обработка динамических элементов (Ca до U, легкие элементы)
+            // Эти контейнеры находятся внутри секции анализатора, поэтому их нужно найти в клоне.
+            activeSection.querySelectorAll('div[id$="elements-ca-u"], div[id$="light-elements"]').forEach(originalDynamicContainer => {
+                saveDynamicValues(originalDynamicContainer.id); // Убеждаемся, что данные актуальны
+                const dynamicElements = dynamicElementData[originalDynamicContainer.id];
 
-        const wrapper = document.createElement("div");
-        // Эти стили делают обертку невидимой и вне потока документа,
-        // чтобы она не влияла на макет, пока html2pdf делает снимок.
-        wrapper.style.cssText = `
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 210mm; /* Ширина A4 для рендеринга */
-            height: 297mm; /* Высота A4 для рендеринга */
-            padding: 20mm; /* Отступы для содержимого PDF */
-            box-sizing: border-box;
-            background: white;
-            opacity: 0; /* Делаем полностью невидимой */
-            pointer-events: none; /* Гарантируем отсутствие взаимодействия */
-            z-index: -1000; /* За всеми остальными элементами */
-            overflow: auto; /* Позволяем содержимому прокручиваться внутри обертки, html2pdf будет обрабатывать страницы */
-        `;
-        wrapper.appendChild(pdfContentClone); // Добавляем обработанную копию формы
-        document.body.appendChild(wrapper); // Добавляем обертку в DOM
+                if (dynamicElements && dynamicElements.length > 0) {
+                    const dynamicSectionTitle = document.createElement('h5');
+                    dynamicSectionTitle.className = 'pdf-sub-section-title';
+                    dynamicSectionTitle.textContent = originalDynamicContainer.previousElementSibling?.textContent || 'Элементы';
+                    pdfRenderContainer.appendChild(dynamicSectionTitle);
 
+                    dynamicElements.forEach(entry => {
+                        const elementDiv = document.createElement('div');
+                        elementDiv.className = 'pdf-field-display';
+                        elementDiv.textContent = `Элемент: ${entry.element || '—'}, Диапазон: ${entry.range || '—'}`;
+                        pdfRenderContainer.appendChild(elementDiv);
+                    });
+                }
+            });
+        }
+        
         const opt = {
             filename: 'oprosny_list.pdf',
             html2canvas: { 
                 scale: 2, 
                 useCORS: true,
-                logging: true, // Включаем логирование для отладки
-                windowWidth: pdfContentClone.scrollWidth, // Захват полной ширины контента
-                windowHeight: pdfContentClone.scrollHeight // Захват полной высоты контента
+                logging: true,
+                windowWidth: pdfRenderContainer.scrollWidth > 0 ? pdfRenderContainer.scrollWidth : 210 * (96 / 25.4), // Fallback to A4 width in pixels if scrollWidth is 0
+                windowHeight: pdfRenderContainer.scrollHeight > 0 ? pdfRenderContainer.scrollHeight : 297 * (96 / 25.4) // Fallback to A4 height in pixels
             },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' , margin: [10, 10, 10, 10] }, 
             pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
@@ -798,11 +815,11 @@
         try {
             // Небольшая задержка, чтобы браузер успел отрендерить невидимую обертку
             await new Promise(resolve => setTimeout(resolve, 300));
-            pdfBlob = await html2pdf().set(opt).from(wrapper).outputPdf('blob');
+            pdfBlob = await html2pdf().set(opt).from(pdfRenderContainer).outputPdf('blob');
         } finally {
             // Удаляем временную обертку из DOM после генерации PDF
-            if (document.body.contains(wrapper)) {
-                document.body.removeChild(wrapper);
+            if (document.body.contains(pdfRenderContainer)) {
+                document.body.removeChild(pdfRenderContainer);
             }
         }
         return pdfBlob;
@@ -810,7 +827,7 @@
 
     async function sendToGoogleSheet(formData, pdfBase64, installationPhotoDataUrl) {
         // Проверка и сообщение, если URL не установлен
-        if (!GOOGLE_SHEET_WEB_APP_URL) { // Условие изменено, чтобы просто проверять наличие URL
+        if (!GOOGLE_SHEET_WEB_APP_URL) {
             console.error("GOOGLE_SHEET_WEB_APP_URL не установлен. Отправка в Google Sheet пропущена. Пожалуйста, обновите URL в коде Canvas.");
             alert("Ошибка: URL для Google Таблицы не настроен. Пожалуйста, обновите код Canvas с правильным URL веб-приложения Google Apps Script.");
             return;
@@ -838,7 +855,7 @@
 
         } catch (error) {
             console.error("Ошибка при отправке в Google Sheet:", error);
-            alert("Ошибка при отправке данных. Проверьте подключение к интернету или попробуйте позже."); // Более общее сообщение об ошибке
+            alert("Ошибка при отправке данных. Проверьте подключение к интернету или попробуйте позже.");
         }
     }
 
