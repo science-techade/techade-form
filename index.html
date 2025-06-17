@@ -34,20 +34,20 @@
             content: " *";
             color: red;
         }
-        /* Стили для контейнера, который используется для генерации PDF (ВРЕМЕННО ВИДИМЫЙ ДЛЯ ОТЛАДКИ) */
+        /* Стили для контейнера, который используется для генерации PDF (СКРЫТ ДЛЯ ПРОДАКШНА) */
         .pdf-render-container {
-            position: fixed; /* Прибиваем к окну просмотра */
-            top: 0;
-            left: 0;
-            width: 100vw; /* Занимаем всю ширину окна */
-            height: 100vh; /* Занимаем всю высоту окна */
-            border: 5px solid red; /* Очень заметная красная рамка */
+            position: fixed;
+            top: -9999px; /* Скрываем за пределами экрана */
+            left: -9999px;
+            width: 210mm; /* Ширина A4 */
+            min-height: 297mm; /* Минимальная высота A4 */
             padding: 20mm; /* Отступы для содержимого PDF */
             box-sizing: border-box;
-            background: white; /* Белый фон, чтобы перекрывать остальное */
-            z-index: 9999; /* Поверх всех остальных элементов */
-            overflow-y: auto; /* Включаем прокрутку, если содержимое длинное */
-            display: block; /* Убеждаемся, что он всегда виден */
+            background: white;
+            z-index: -1000; /* За всеми остальными элементами */
+            overflow: hidden; /* Скрываем скроллбары */
+            opacity: 0; /* Делаем полностью невидимой */
+            pointer-events: none; /* Гарантируем отсутствие взаимодействия */
         }
 
         /* Стили для статических блоков в PDF */
@@ -691,8 +691,8 @@
             console.log("generatePDFBlob: pdfRenderContainer already exists, reusing.");
         }
         
-        pdfRenderContainer.innerHTML = '<h3><strong style="color: red;">ЭТО БЛОК ПРЕДПРОСМОТРА PDF (ДЛЯ ОТЛАДКИ!)</strong></h3><hr>'; // Временное сообщение для отладки
-        console.log("generatePDFBlob: Initial debug message added to pdfRenderContainer.");
+        pdfRenderContainer.innerHTML = ''; // Очищаем от отладочных сообщений
+        console.log("generatePDFBlob: pdfRenderContainer cleared.");
 
         // Добавляем заголовок формы
         const formTitle = document.createElement('h2');
@@ -766,7 +766,7 @@
                 displayDiv.className = 'pdf-field-display';
 
                 const labelElement = el.closest('.mb-3')?.querySelector('label') || el.closest('.form-check')?.querySelector('label');
-                const labelText = labelElement ? labelElement.textContent.trim().replace('*', '') : el.name;
+                const labelText = labelElement ? labelElement.textContent.trim().replace('*', '') : el.name; // Fallback to name if no label
 
                 if (el.type === 'checkbox') {
                     displayDiv.innerHTML = `<strong>${labelText}:</strong> ${el.checked ? 'Да' : 'Нет'}`;
@@ -827,15 +827,42 @@
             console.warn(`generatePDFBlob: Active section with ID ${activeSectionId} not found.`);
         }
         
-        // В ЭТОМ РЕЖИМЕ ОТЛАДКИ МЫ НЕ ГЕНЕРИРУЕМ PDF.
-        // Вместо этого, контейнер pdfRenderContainer остается на странице,
-        // чтобы вы могли увидеть его содержимое.
-        console.log("generatePDFBlob: PDF generation skipped for debugging purposes. Check the red box on the page.");
-        return null; // Возвращаем null, так как PDF не был сгенерирован
+        // Настройка опций для html2pdf
+        const opt = {
+            filename: 'oprosny_list.pdf',
+            html2canvas: { 
+                scale: 2, 
+                useCORS: true,
+                logging: true,
+                windowWidth: pdfRenderContainer.scrollWidth > 0 ? pdfRenderContainer.scrollWidth : 210 * (96 / 25.4),
+                windowHeight: pdfRenderContainer.scrollHeight > 0 ? pdfRenderContainer.scrollHeight : 297 * (96 / 25.4)
+            },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' , margin: [10, 10, 10, 10] }, 
+            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+        };
+
+        let pdfBlob = null;
+        try {
+            console.log("generatePDFBlob: Starting html2pdf generation.");
+            // Небольшая задержка, чтобы браузер успел отрендерить контейнер перед захватом
+            await new Promise(resolve => setTimeout(resolve, 300));
+            pdfBlob = await html2pdf().set(opt).from(pdfRenderContainer).outputPdf('blob');
+            console.log("generatePDFBlob: html2pdf generation completed.");
+        } catch (error) {
+            console.error("generatePDFBlob: Error during html2pdf generation:", error);
+            // Если произошла ошибка, возвращаем null и выводим сообщение об ошибке
+            return null;
+        } finally {
+            // Удаляем временный контейнер после генерации PDF
+            if (document.body.contains(pdfRenderContainer)) {
+                document.body.removeChild(pdfRenderContainer);
+                console.log("generatePDFBlob: pdfRenderContainer removed from DOM.");
+            }
+        }
+        return pdfBlob;
     }
 
     async function sendToGoogleSheet(formData, pdfBase64, installationPhotoDataUrl) {
-        // Проверка и сообщение, если URL не установлен
         if (!GOOGLE_SHEET_WEB_APP_URL) {
             console.error("GOOGLE_SHEET_WEB_APP_URL не установлен. Отправка в Google Sheet пропущена. Пожалуйста, обновите URL в коде Canvas.");
             alert("Ошибка: URL для Google Таблицы не настроен. Пожалуйста, обновите код Canvas с правильным URL веб-приложения Google Apps Script.");
@@ -937,10 +964,15 @@
                 console.warn("submitForm: No active material section found.");
             }
 
-            // Generate PDF if selected - ТЕПЕРЬ ЭТО ВРЕМЕННО ОТКЛЮЧЕНО ДЛЯ ОТЛАДКИ!
+            // Generate PDF if selected
             if (sendPdfCheckbox.checked) {
-                console.log("submitForm: sendPdfCheckbox is checked. Calling generatePDFBlob (debugging mode).");
-                pdfBase64 = await generatePDFBlob(); // generatePDFBlob теперь просто отображает HTML и возвращает null
+                console.log("submitForm: sendPdfCheckbox is checked. Calling generatePDFBlob.");
+                pdfBase64 = await generatePDFBlob();
+                if (pdfBase64) {
+                    console.log("submitForm: PDF Base64 generated. Length:", pdfBase64.length);
+                } else {
+                    console.error("submitForm: PDF generation failed or returned null.");
+                }
             } else {
                 console.log("submitForm: sendPdfCheckbox is NOT checked. Skipping PDF generation.");
             }
@@ -977,12 +1009,11 @@
                     Array.from(currentMaterialSection ? currentMaterialSection.querySelectorAll('input[type="checkbox"]') : []).map(el => [el.name, el.checked ? 'Да' : 'Нет'])
                 ),
                 
-                // Base64 вложения - pdfBase64 будет null в режиме отладки
+                // Base64 вложения
                 pdf_attachment_base64: pdfBase64 || '', 
                 installation_photo_base64: installationPhotoDataUrl || ''
             };
 
-            // !!! ВРЕМЕННО ОТКЛЮЧЕНО EmailJS ДЛЯ ОТЛАДКИ PDF !!!
             await sendToGoogleSheet(googleSheetPayload, pdfBase64, installationPhotoDataUrl);
             console.log("submitForm: sendToGoogleSheet called.");
 
