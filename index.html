@@ -48,13 +48,6 @@
             overflow: hidden; /* Скрываем скроллбары */
             opacity: 0; /* Делаем полностью невидимой */
             pointer-events: none; /* Гарантируем отсутствие взаимодействия */
-            /* Для временной отладки, если PDF пустой:
-            border: 1px solid red;
-            opacity: 1;
-            top: 0;
-            left: 0;
-            z-index: 1000;
-            */
         }
 
         /* Стили для статических блоков в PDF */
@@ -498,7 +491,7 @@
 <script>
     // URL для вашего Google Apps Script Web App.
     // Замените этот placeholder на фактический URL после развертывания скрипта.
-    const GOOGLE_SHEET_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwYJ6dMr4Wv5VkagslH-glvYCGcys22IhfVviYC5Bu2BPkNos9YUvHxcwy4sjKZ9aZ1Mw/exec'; // <--- ОБНОВИТЕ ЭТУ СТРОКУ!
+    const GOOGLE_SHEET_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbwYJ6dMr4Wv5VkagslH-glvYCGcys22IhfVviYC5Bu2BPkNos9YUvHxcwy4sjKZ9aZ1Mw/exec'; // <--- ОБНОВИТЕ ЭТУ СТРОКУ на ваш НОВЫЙ URL!
 
     const dynamicElementData = {};
 
@@ -632,8 +625,8 @@
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onloadend = () => {
-                console.log("blobToBase64: FileReader result (Data URL start):", reader.result ? reader.result.substring(0, 100) + '...' : 'null or empty'); // Log start of Data URL, handle null
-                const base64String = reader.result ? reader.result.split(',')[1] : null; // Handle null result
+                console.log("blobToBase64: FileReader result (Data URL start):", reader.result ? reader.result.substring(0, 100) + '...' : 'null or empty');
+                const base64String = reader.result ? reader.result.split(',')[1] : null;
                 if (!base64String) {
                     console.error("blobToBase64: Base64 string is empty or null after splitting.");
                     alert("Ошибка: Не удалось извлечь Base64 строку из PDF Blob.");
@@ -872,22 +865,18 @@
                 scale: 2, 
                 useCORS: true,
                 logging: true,
-                // Removed windowWidth and windowHeight as they can cause issues
             },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' , margin: [10, 10, 10, 10] }, 
-            // Removed pagebreak mode to simplify and avoid rendering conflicts
         };
 
         let pdfBlob = null;
         try {
             console.log("generatePDFBlob: Starting html2pdf generation.");
-            // Небольшая задержка, чтобы браузер успел отрендерить контейнер перед захватом
             await new Promise(resolve => setTimeout(resolve, 300));
             pdfBlob = await html2pdf().set(opt).from(pdfRenderContainer).outputPdf('blob');
             console.log("generatePDFBlob: html2pdf generation completed.");
             if (pdfBlob) {
                 console.log(`generatePDFBlob: PDF Blob generated! Size: ${pdfBlob.size} bytes.`);
-                // alert(`PDF Blob generated! Size: ${pdfBlob.size} bytes. Checking for non-zero size.`); // Keep for user feedback during test
             } else {
                 console.error("generatePDFBlob: PDF Blob is NULL! Something went wrong with html2pdf generation.");
                 alert("Ошибка: PDF Blob равен NULL. Проверьте консоль на ошибки html2pdf.");
@@ -897,7 +886,6 @@
             alert(`Ошибка при генерации PDF: ${error.message}. Проверьте консоль.`);
             return null;
         } finally {
-            // Удаляем временный контейнер после генерации PDF
             if (document.body.contains(pdfRenderContainer)) {
                 document.body.removeChild(pdfRenderContainer);
                 console.log("generatePDFBlob: pdfRenderContainer removed from DOM.");
@@ -916,7 +904,7 @@
 
         const payload = {
             ...formData,
-            pdf_attachment_base64: pdfBase64 || '',
+            pdf_attachment_base64: pdfBase64 || '', 
             installation_photo_base64: installationPhotoDataUrl || ''
         };
 
@@ -928,7 +916,6 @@
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(payload),
-                // УДАЛЕНО: mode: 'no-cors' - это было причиной проблем с данными
             });
 
             console.log("sendToGoogleSheet: Request sent. Response:", response);
@@ -966,7 +953,7 @@
         const material = materialSelect.value;
 
         let pdfBase64 = null;
-        let installationPhotoDataUrl = null;
+        let installationPhotoDataUrl = null; 
         let formDataForGoogleSheet = {};
 
         try {
@@ -989,7 +976,7 @@
                 const dynamicElements = dynamicElementData[id];
                 if (dynamicElements && dynamicElements.length > 0) {
                     // Store as stringified JSON to save in one cell in Google Sheet
-                    formDataForGoogleSheet[id] = JSON.stringify(dynamicElements);
+                    formDataForGoogleSheet[id] = JSON.stringify(dynamicElements); 
                 }
             });
             console.log("submitForm: Dynamic elements data collected.");
@@ -1012,30 +999,32 @@
             if (sendPdfCheckbox.checked) {
                 console.log("submitForm: sendPdfCheckbox is checked. Calling generatePDFBlob.");
                 pdfBase64 = await generatePDFBlob();
+                // Ensure pdfBase64 is a string, even if empty
+                pdfBase64 = pdfBase64 || ''; 
                 if (pdfBase64) {
                     console.log("submitForm: PDF Base64 generated. Length:", pdfBase64.length);
                 } else {
-                    console.error("submitForm: PDF generation failed or returned null or undefined. PDF will not be attached.");
+                    console.error("submitForm: PDF generation failed or returned null or empty. PDF will not be attached.");
                     alert("Внимание: PDF-файл не был сгенерирован или был пустым. Он не будет прикреплен к письму.");
                 }
             } else {
                 console.log("submitForm: sendPdfCheckbox is NOT checked. Skipping PDF generation.");
             }
-
+            
             // --- Отправка в Google Sheet ---
             // Собираем все данные для Google Sheet.
             const googleSheetPayload = {
                 // Основные поля
-                date: form.date.value || '',
-                company: form.company.value || '',
-                contact_person: form.contact_person.value || '',
-                phone: form.phone.value || '',
-                email: email, // Используем email напрямую
-                country: form.country.value || '',
-                location: form.location.value || '',
-                material_type: material,
+                date: formDataForGoogleSheet.date || '',
+                company: formDataForGoogleSheet.company || '',
+                contact_person: formDataForGoogleSheet.contact_person || '',
+                phone: formDataForGoogleSheet.phone || '',
+                email: formDataForGoogleSheet.email || '',
+                country: formDataForGoogleSheet.country || '',
+                location: formDataForGoogleSheet.location || '',
+                material_type: formDataForGoogleSheet.material || '', // Ensure it maps correctly from form's 'material'
 
-                // Динамические элементы
+                // Динамические элементы (stringified JSON)
                 'elements-ca-u': formDataForGoogleSheet['elements-ca-u'] || '',
                 'light-elements': formDataForGoogleSheet['light-elements'] || '',
                 'sinter-elements-ca-u': formDataForGoogleSheet['sinter-elements-ca-u'] || '',
@@ -1044,26 +1033,21 @@
                 'courier-elements-ca-u': formDataForGoogleSheet['courier-elements-ca-u'] || '',
                 'courier-light-elements': formDataForGoogleSheet['courier-light-elements'] || '',
 
-                // Поля специфичных секций (например, pulp_streams)
-                // Собираем данные из активной секции
-                ...Object.fromEntries(
-                    Array.from(currentMaterialSection ? currentMaterialSection.querySelectorAll('input:not([type="file"]):not([type="checkbox"]), select, textarea') : []).map(el => [el.name, el.value])
-                ),
-                // Чекбоксы из активной секции
-                ...Object.fromEntries(
-                    Array.from(currentMaterialSection ? currentMaterialSection.querySelectorAll('input[type="checkbox"]') : []).map(el => [el.name, el.checked ? 'Да' : 'Нет'])
-                ),
-
+                // Все остальные поля из formDataForGoogleSheet, чтобы убедиться, что ничего не пропущено
+                // (Это более надежный способ, чем перечислять все индивидуально)
+                ...formDataForGoogleSheet,
+                
                 // Base64 вложения
-                pdf_attachment_base64: pdfBase64 || '',
+                pdf_attachment_base64: pdfBase64, // pdfBase64 теперь гарантированно строка или пустая строка
                 installation_photo_base64: installationPhotoDataUrl || ''
             };
 
-            await sendToGoogleSheet(googleSheetPayload, pdfBase64, installationPhotoDataUrl);
-            console.log("submitForm: sendToGoogleSheet called.");
+            console.warn("sendToGoogleSheet: ВНИМАНИЕ: Отправка данных в Google Apps Script временно ОТКЛЮЧЕНА для диагностики CORS. Проверьте консоль.");
+            // await sendToGoogleSheet(googleSheetPayload, pdfBase64, installationPhotoDataUrl); // ВРЕМЕННО ЗАКОММЕНТИРОВАНО ДЛЯ ДИАГНОСТИКИ
+            // console.log("submitForm: sendToGoogleSheet called.");
 
         } catch (err) {
-            console.error("submitForm: Критическая ошибка при отправке формы:", err);
+            console.error("submitForm: Критическая ошибка при обработке формы:", err);
             errorMessageDiv.textContent = `Критическая ошибка: ${err.message || "Неизвестная ошибка."} Пожалуйста, попробуйте еще раз или обратитесь в поддержку.`;
             errorMessageDiv.style.display = 'block';
         }
