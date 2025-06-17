@@ -48,6 +48,13 @@
             overflow: hidden; /* Скрываем скроллбары */
             opacity: 0; /* Делаем полностью невидимой */
             pointer-events: none; /* Гарантируем отсутствие взаимодействия */
+            /* Для временной отладки, если PDF пустой:
+            border: 1px solid red;
+            opacity: 1;
+            top: 0;
+            left: 0;
+            z-index: 1000;
+            */
         }
 
         /* Стили для статических блоков в PDF */
@@ -625,9 +632,11 @@
         return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onloadend = () => {
+                console.log("blobToBase64: FileReader result (Data URL start):", reader.result.substring(0, 100) + '...'); // Log start of Data URL
                 const base64String = reader.result.split(',')[1];
                 if (!base64String) {
                     console.error("blobToBase64: Base64 string is empty or null after splitting.");
+                    alert("Ошибка: Не удалось извлечь Base64 строку из PDF Blob.");
                     resolve(null);
                     return;
                 }
@@ -636,6 +645,7 @@
             };
             reader.onerror = (error) => {
                 console.error("blobToBase64: FileReader error:", error);
+                alert(`Ошибка FileReader при конвертации PDF: ${error.message}.`);
                 reject(error);
             };
             reader.readAsDataURL(blob);
@@ -710,6 +720,13 @@
         
         pdfRenderContainer.innerHTML = ''; // Очищаем от отладочных сообщений
         console.log("generatePDFBlob: pdfRenderContainer cleared.");
+
+        // Добавляем статическую тестовую строку для отладки рендеринга
+        const testParagraph = document.createElement('p');
+        testParagraph.textContent = 'Тестовая строка для PDF. Если вы это видите, рендеринг работает.';
+        testParagraph.style.color = 'blue';
+        testParagraph.style.fontSize = '16px';
+        pdfRenderContainer.appendChild(testParagraph);
 
         // Добавляем заголовок формы
         const formTitle = document.createElement('h2');
@@ -844,6 +861,10 @@
             console.warn(`generatePDFBlob: Active section with ID ${activeSectionId} not found.`);
         }
         
+        // Логируем HTML-содержимое, которое будет захвачено для PDF
+        console.log("generatePDFBlob: InnerHTML of pdfRenderContainer before html2pdf:", pdfRenderContainer.innerHTML.substring(0, 500) + '...');
+
+
         // Настройка опций для html2pdf
         const opt = {
             filename: 'oprosny_list.pdf',
@@ -851,11 +872,10 @@
                 scale: 2, 
                 useCORS: true,
                 logging: true,
-                windowWidth: pdfRenderContainer.scrollWidth > 0 ? pdfRenderContainer.scrollWidth : 210 * (96 / 25.4),
-                windowHeight: pdfRenderContainer.scrollHeight > 0 ? pdfRenderContainer.scrollHeight : 297 * (96 / 25.4)
+                // Removed windowWidth and windowHeight as they can cause issues
             },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' , margin: [10, 10, 10, 10] }, 
-            pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
+            // Removed pagebreak mode to simplify and avoid rendering conflicts
         };
 
         let pdfBlob = null;
@@ -866,13 +886,15 @@
             pdfBlob = await html2pdf().set(opt).from(pdfRenderContainer).outputPdf('blob');
             console.log("generatePDFBlob: html2pdf generation completed.");
             if (pdfBlob) {
-                alert(`PDF Blob generated! Size: ${pdfBlob.size} bytes. Checking for non-zero size.`);
+                console.log(`generatePDFBlob: PDF Blob generated! Size: ${pdfBlob.size} bytes.`);
+                // alert(`PDF Blob generated! Size: ${pdfBlob.size} bytes. Checking for non-zero size.`); // Keep for user feedback during test
             } else {
-                alert("PDF Blob is NULL! Something went wrong with html2pdf generation.");
+                console.error("generatePDFBlob: PDF Blob is NULL! Something went wrong with html2pdf generation.");
+                alert("Ошибка: PDF Blob равен NULL. Проверьте консоль на ошибки html2pdf.");
             }
         } catch (error) {
             console.error("generatePDFBlob: Error during html2pdf generation:", error);
-            alert(`Error generating PDF: ${error.message}. Check console.`);
+            alert(`Ошибка при генерации PDF: ${error.message}. Проверьте консоль.`);
             return null;
         } finally {
             // Удаляем временный контейнер после генерации PDF
@@ -993,7 +1015,8 @@
                 if (pdfBase64) {
                     console.log("submitForm: PDF Base64 generated. Length:", pdfBase64.length);
                 } else {
-                    console.error("submitForm: PDF generation failed or returned null.");
+                    console.error("submitForm: PDF generation failed or returned null or undefined. PDF will not be attached.");
+                    alert("Внимание: PDF-файл не был сгенерирован или был пустым. Он не будет прикреплен к письму.");
                 }
             } else {
                 console.log("submitForm: sendPdfCheckbox is NOT checked. Skipping PDF generation.");
