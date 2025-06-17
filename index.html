@@ -2,24 +2,41 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-1">
     <title>Опросный лист по техпроцессу</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        .element-row { display: flex; gap: 10px; margin-bottom: 10px; }
-        .element-row input { flex: 1; }
-        .element-row button { white-space: nowrap; }
-        .analyzer-section, .conditional-block { display: none; margin-top: 20px; padding: 15px; border: 1px solid #ccc; border-radius: 5px; background-color: #f9f9f9; }
+        /* Общие стили для динамически добавляемых строк элементов */
+        .element-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+        .element-row input {
+            flex: 1;
+        }
+        .element-row button {
+            white-space: nowrap;
+        }
+        /* Стили для секций анализатора, которые показываются/скрываются */
+        .analyzer-section, .conditional-block {
+            display: none;
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
         /* Стили для обязательных полей */
         .required-field::after {
             content: " *";
             color: red;
         }
-        /* Скрываем элементы управления, которые не нужны в PDF, используя class вместо media print */
-        /* Этот класс по-прежнему существует, но теперь он применяется только в скрипте generatePDFBlob */
-        .hide-for-pdf {
+        /* Класс для элементов, которые должны быть невидимыми только при генерации PDF */
+        /* Этот класс будет добавляться/удаляться динамически, он не должен быть жестко применен в HTML */
+        .pdf-hide {
             display: none !important;
         }
     </style>
@@ -412,7 +429,7 @@
                 </div>
             </div>
         </div>
-        <div class="mb-3 mt-4"> <!-- Removed hide-for-pdf class -->
+        <div class="mb-3 mt-4"> 
             <!-- New checkboxes for attachment control -->
             <div class="form-check attachment-checkbox">
                 <input class="form-check-input" type="checkbox" id="sendPdf" checked>
@@ -421,7 +438,7 @@
             
             <button id="submit-button" type="button" class="btn btn-primary">Отправить</button>
         </div>
-        <div class="mt-3"> <!-- Removed hide-for-pdf class -->
+        <div class="mt-3"> 
             <small class="text-muted"><span style="color: red;">*</span> - обязательные поля</small>
         </div>
     </form>
@@ -619,140 +636,161 @@
     }
 
     async function generatePDFBlob() {
-        const form = document.getElementById("form");
-        const material = form.material.value;
-        const pdfPrintableContent = document.createElement("div"); // Создаем новый контейнер для PDF
+        const pdfContentOriginal = document.getElementById("pdf-content");
+        const pdfContentClone = pdfContentOriginal.cloneNode(true); // Глубокое клонирование
 
-        // Helper function to add a row to the PDF content
-        function addPdfRow(label, value) {
-            const rowDiv = document.createElement("div");
-            rowDiv.style.marginBottom = "4px";
-            rowDiv.style.padding = "4px 8px";
-            rowDiv.style.border = "1px solid #ccc";
-            rowDiv.style.borderRadius = "3px";
-            rowDiv.style.backgroundColor = "#f9f9f9";
-            rowDiv.style.fontSize = "13px";
-            rowDiv.innerHTML = `<strong>${label}:</strong> ${value || '—'}`;
-            pdfPrintableContent.appendChild(rowDiv);
-        }
-
-        // --- Основные сведения ---
-        addPdfRow("Дата заполнения опросного листа", form.date.value);
-        addPdfRow("Название компании", form.company.value);
-        addPdfRow("Контактное лицо", form.contact_person.value);
-        addPdfRow("Телефон", form.phone.value);
-        addPdfRow("Email", form.email.value);
-        addPdfRow("Страна", form.country.value);
-        addPdfRow("Местонахождение", form.location.value);
-        addPdfRow("Тип анализируемого материала", form.material.options[form.material.selectedIndex]?.text);
-
-        // --- Секция по типу материала ---
-        const currentMaterialSection = document.getElementById(`section-${material}`);
-        if (currentMaterialSection) {
-            const sectionTitle = currentMaterialSection.querySelector('h5')?.textContent || `Секция для ${material}`;
-            const sectionHeader = document.createElement("h5");
-            sectionHeader.style.marginTop = "20px";
-            sectionHeader.textContent = sectionTitle;
-            pdfPrintableContent.appendChild(sectionHeader);
-
-            // Iterate over all input, select, textarea elements in the active section
-            currentMaterialSection.querySelectorAll('input:not([type="file"]):not([type="button"]), select, textarea').forEach(el => {
-                const labelElement = el.closest(".mb-3")?.querySelector("label") || el.closest(".form-check")?.querySelector("label");
-                const labelText = labelElement ? labelElement.textContent.trim().replace('*', '') : el.name;
-                let value;
-
-                if (el.type === "checkbox") {
-                    value = el.checked ? "Да" : "Нет";
-                } else if (el.tagName === "SELECT") {
-                    value = el.options[el.selectedIndex]?.text;
-                } else {
-                    value = el.value;
-                }
-                addPdfRow(labelText, value);
-            });
-
-            // Add dynamic elements for the active section
-            const dynamicContainersInActiveSection = currentMaterialSection.querySelectorAll('div[id$="elements-ca-u"], div[id$="light-elements"]');
-            dynamicContainersInActiveSection.forEach(container => {
-                saveDynamicValues(container.id); // Ensure latest dynamic values are saved
-                const dynamicElements = dynamicElementData[container.id];
-                if (dynamicElements && dynamicElements.length > 0) {
-                    const dynamicHeader = document.createElement("div");
-                    dynamicHeader.style.marginTop = "10px";
-                    dynamicHeader.style.fontWeight = "bold";
-                    dynamicHeader.textContent = `Анализируемые элементы из ${container.id.includes('light') ? 'легких химических элементов' : 'Ca до U'}:`;
-                    pdfPrintableContent.appendChild(dynamicHeader);
-
-                    dynamicElements.forEach(entry => {
-                        const elementDiv = document.createElement("div");
-                        elementDiv.style.marginBottom = "2px";
-                        elementDiv.textContent = `${entry.element || "—"} — ${entry.range || "—"}`;
-                        pdfPrintableContent.appendChild(elementDiv);
-                    });
-                }
-            });
-
-            // Add photo if present for the active section
-            const photoInput = document.getElementById(`installation_photo_${material}`);
-            const jpegData = photoInput?.dataset?.jpeg;
-            if (jpegData) {
-                const imgHeader = document.createElement("div");
-                imgHeader.style.marginTop = "20px";
-                imgHeader.style.fontWeight = "bold";
-                imgHeader.textContent = "Фото местонахождения:";
-                pdfPrintableContent.appendChild(imgHeader);
-
-                const img = document.createElement("img");
-                img.src = jpegData;
-                img.style.maxWidth = "100%";
-                img.style.height = "auto";
-                img.style.marginTop = "5px";
-                img.style.border = "1px solid #ddd";
-                img.style.pageBreakInside = 'avoid'; // Prevent image from breaking across pages
-                pdfPrintableContent.appendChild(img);
+        // Скрываем кнопки добавления/удаления элементов в клоне
+        pdfContentClone.querySelectorAll('.element-row button, .btn-outline-primary').forEach(button => {
+            button.remove(); // Удаляем кнопки из клона
+        });
+        
+        // Убеждаемся, что только выбранная секция анализатора видна в клоне
+        const materialType = document.getElementById('material').value;
+        pdfContentClone.querySelectorAll('.analyzer-section').forEach(section => {
+            if (section.id !== `section-${materialType}`) {
+                section.style.display = 'none';
             }
-        }
+        });
+
+        // Обрабатываем поля формы в клоне: заменяем их статическим текстом
+        pdfContentClone.querySelectorAll('input, select, textarea').forEach(el => {
+            // Исключаем скрытые поля, которые не должны отображаться в PDF
+            if (el.type === 'hidden') {
+                el.remove();
+                return;
+            }
+
+            const wrapperDiv = el.closest('.mb-3') || el.closest('.form-check'); // Находим родительский div для замены
+            if (!wrapperDiv) {
+                // Если нет родительского .mb-3 или .form-check, просто заменим сам элемент
+                const tempDiv = document.createElement('div');
+                tempDiv.textContent = el.value || '—';
+                el.replaceWith(tempDiv);
+                return;
+            }
+            
+            const labelElement = wrapperDiv.querySelector('label');
+            const labelText = labelElement ? labelElement.textContent.trim().replace('*', '') : '';
+            let displayValue = '';
+
+            if (el.type === 'checkbox') {
+                displayValue = el.checked ? 'Да' : 'Нет';
+                // Заменяем весь form-check div
+                const newContentDiv = document.createElement('div');
+                newContentDiv.style.marginBottom = "4px";
+                newContentDiv.style.padding = "4px 8px";
+                newContentDiv.style.border = "1px solid #ccc";
+                newContentDiv.style.borderRadius = "3px";
+                newContentDiv.style.backgroundColor = "#f9f9f9";
+                newContentDiv.style.fontSize = "13px";
+                newContentDiv.innerHTML = `<strong>${labelText}:</strong> ${displayValue}`;
+                wrapperDiv.replaceWith(newContentDiv);
+
+            } else if (el.type === 'file') {
+                const previewImg = wrapperDiv.querySelector('img');
+                const jpegData = el.dataset?.jpeg;
+
+                // Создаем div для отображения имени файла (если выбран)
+                const fileDisplayDiv = document.createElement('div');
+                fileDisplayDiv.style.marginBottom = "4px";
+                fileDisplayDiv.style.padding = "4px 8px";
+                fileDisplayDiv.style.border = "1px solid #ccc";
+                fileDisplayDiv.style.borderRadius = "3px";
+                fileDisplayDiv.style.backgroundColor = "#f9f9f9";
+                fileDisplayDiv.style.fontSize = "13px";
+
+                if (el.files && el.files.length > 0) {
+                    fileDisplayDiv.innerHTML = `<strong>${labelText}:</strong> ${el.files[0].name}`;
+                } else {
+                    fileDisplayDiv.innerHTML = `<strong>${labelText}:</strong> —`;
+                }
+                
+                // Вставляем div с именем файла перед оригинальным блоком
+                wrapperDiv.parentElement.insertBefore(fileDisplayDiv, wrapperDiv);
+
+                // Если есть изображение, добавляем его после div с именем файла
+                if (jpegData) {
+                    const img = document.createElement("img");
+                    img.src = jpegData;
+                    img.style.maxWidth = "100%";
+                    img.style.height = "auto";
+                    img.style.marginTop = "5px";
+                    img.style.border = "1px solid #ddd";
+                    img.style.pageBreakInside = 'avoid';
+                    wrapperDiv.parentElement.insertBefore(img, wrapperDiv); // Добавляем изображение
+                }
+
+                wrapperDiv.remove(); // Удаляем оригинальный блок с файловым полем, лейблом и превью
+            } else if (el.tagName === 'SELECT') {
+                displayValue = el.options[el.selectedIndex]?.text || '—';
+                const newContentDiv = document.createElement('div');
+                newContentDiv.style.marginBottom = "4px";
+                newContentDiv.style.padding = "4px 8px";
+                newContentDiv.style.border = "1px solid #ccc";
+                newContentDiv.style.borderRadius = "3px";
+                newContentDiv.style.backgroundColor = "#f9f9f9";
+                newContentDiv.style.fontSize = "13px";
+                newContentDiv.innerHTML = `<strong>${labelText}:</strong> ${displayValue}`;
+                wrapperDiv.replaceWith(newContentDiv);
+            } else { // Для текстовых полей и чисел
+                displayValue = el.value || '—';
+                const newContentDiv = document.createElement('div');
+                newContentDiv.style.marginBottom = "4px";
+                newContentDiv.style.padding = "4px 8px";
+                newContentDiv.style.border = "1px solid #ccc";
+                newContentDiv.style.borderRadius = "3px";
+                newContentDiv.style.backgroundColor = "#f9f9f9";
+                newContentDiv.style.fontSize = "13px";
+                newContentDiv.innerHTML = `<strong>${labelText}:</strong> ${displayValue}`;
+                wrapperDiv.replaceWith(newContentDiv);
+            }
+        });
+
+        // Дополнительная обработка для динамических элементов (которые добавляются кнопкой)
+        // Они уже должны быть вложены в clone, но нужно удалить их кнопки
+        pdfContentClone.querySelectorAll('.element-row button').forEach(button => button.remove());
+
 
         const wrapper = document.createElement("div");
-        // Using fixed position, top 0, left 0, and opacity 0 to ensure it's renderable but invisible
-        // Increased padding to ensure content is not clipped by PDF margins
+        // Эти стили делают обертку невидимой и вне потока документа,
+        // чтобы она не влияла на макет, пока html2pdf делает снимок.
         wrapper.style.cssText = `
             position: fixed;
             top: 0;
             left: 0;
-            width: 210mm; /* A4 width for rendering */
-            height: 297mm; /* A4 height for rendering */
-            padding: 20mm; /* Increased padding */
+            width: 210mm; /* Ширина A4 для рендеринга */
+            height: 297mm; /* Высота A4 для рендеринга */
+            padding: 20mm; /* Отступы для содержимого PDF */
             box-sizing: border-box;
             background: white;
-            opacity: 0; /* Make it completely invisible */
-            pointer-events: none; /* Ensure no interaction */
-            z-index: -1000; /* Behind everything else */
-            overflow: auto; /* Allow content to scroll within the wrapper if needed, html2pdf will handle pages */
+            opacity: 0; /* Делаем полностью невидимой */
+            pointer-events: none; /* Гарантируем отсутствие взаимодействия */
+            z-index: -1000; /* За всеми остальными элементами */
+            overflow: auto; /* Позволяем содержимому прокручиваться внутри обертки, html2pdf будет обрабатывать страницы */
         `;
-        // Append the prepared content to the wrapper
-        wrapper.appendChild(pdfPrintableContent);
-        // Append the wrapper to the body
-        document.body.appendChild(wrapper);
+        wrapper.appendChild(pdfContentClone); // Добавляем обработанную копию формы
+        document.body.appendChild(wrapper); // Добавляем обертку в DOM
 
         const opt = {
             filename: 'oprosny_list.pdf',
             html2canvas: { 
                 scale: 2, 
                 useCORS: true,
-                logging: true // Enable html2canvas logging for debugging
+                logging: true, // Включаем логирование для отладки
+                windowWidth: pdfContentClone.scrollWidth, // Захват полной ширины контента
+                windowHeight: pdfContentClone.scrollHeight // Захват полной высоты контента
             },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' , margin: [10, 10, 10, 10] }, // Added margin
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' , margin: [10, 10, 10, 10] }, 
             pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
         };
 
         let pdfBlob;
         try {
-            // A small delay before html2pdf starts to ensure browser has rendered the hidden wrapper
-            await new Promise(resolve => setTimeout(resolve, 300)); // Increased delay
+            // Небольшая задержка, чтобы браузер успел отрендерить невидимую обертку
+            await new Promise(resolve => setTimeout(resolve, 300));
             pdfBlob = await html2pdf().set(opt).from(wrapper).outputPdf('blob');
         } finally {
-            // Make sure the wrapper is removed after PDF generation
+            // Удаляем временную обертку из DOM после генерации PDF
             if (document.body.contains(wrapper)) {
                 document.body.removeChild(wrapper);
             }
@@ -762,7 +800,7 @@
 
     async function sendToGoogleSheet(formData, pdfBase64, installationPhotoDataUrl) {
         // Проверка и сообщение, если URL не установлен
-        if (!GOOGLE_SHEET_WEB_APP_URL || GOOGLE_SHEET_WEB_APP_URL === 'ВАШ_АКТУАЛЬНЫЙ_URL_ЗДЕСЬ') {
+        if (!GOOGLE_SHEET_WEB_APP_URL || GOOGLE_SHEET_WEB_APP_URL === 'https://script.google.com/macros/s/AKfycbx7Pa7xOUkG5PrmZD-FtCyO8zgtXPjOcO4KMDm4fLQdOV6v3MIVSksZNAEVgRqm1wpF4w/exec') {
             console.error("GOOGLE_SHEET_WEB_APP_URL не установлен. Отправка в Google Sheet пропущена. Пожалуйста, обновите URL в коде Canvas.");
             alert("Ошибка: URL для Google Таблицы не настроен. Пожалуйста, обновите код Canvas с правильным URL веб-приложения Google Apps Script.");
             return;
