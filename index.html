@@ -35,17 +35,19 @@
             color: red;
         }
         /* Стили для контейнера, который используется для генерации PDF, чтобы он был невидимым */
+        /* ВРЕМЕННЫЕ СТИЛИ ДЛЯ ОТЛАДКИ - СДЕЛАЙТЕ ВИДИМЫМ */
         .pdf-render-container {
-            position: absolute;
-            left: -9999px; /* Скрываем за пределами экрана */
-            top: -9999px;
+            position: relative; /* Изменено: relative, чтобы появлялся в потоке документа */
+            margin: 20px auto;  /* Изменено: центрируем для видимости */
+            border: 2px solid red; /* Изменено: добавляем красную рамку для видимости */
             width: 210mm; /* Ширина A4 */
             min-height: 297mm; /* Минимальная высота A4, чтобы было место для прокрутки */
             padding: 20mm; /* Отступы для содержимого PDF */
             box-sizing: border-box;
             background: white;
-            z-index: -1000;
-            overflow: hidden; /* Скрываем скроллбары */
+            z-index: 1000; /* Изменено: чтобы быть поверх других элементов */
+            overflow: visible; /* Изменено: показываем контент, даже если он выходит за границы */
+            /* Удалены: opacity: 0; left: -9999px; top: -9999px; pointer-events: none; */
         }
 
         /* Стили для статических блоков в PDF */
@@ -85,7 +87,7 @@
     <h2 class="mb-4">Опросный лист по техпроцессу</h2>
     <form id="form">
         <div id="pdf-content">
-            <input type="hidden" name="pdf_data" id="pdf_data">
+            <!-- Hidden input for pdf_data is no longer needed in the visible form content -->
             <div class="mb-4">
                 <h5>Основные сведения</h5>
                 <div class="mb-3">
@@ -680,6 +682,7 @@
         // Создаем контейнер, который будет содержать HTML для PDF
         const pdfRenderContainer = document.createElement('div');
         pdfRenderContainer.className = 'pdf-render-container';
+        pdfRenderContainer.innerHTML = '<h3>Предварительный просмотр PDF (для отладки)</h3><hr>'; // Временное сообщение для отладки
         document.body.appendChild(pdfRenderContainer);
 
         // Добавляем заголовок формы
@@ -697,7 +700,7 @@
         mainInfoSection.appendChild(mainInfoTitle);
         
         const mainFields = [
-            { id: 'date', label: 'Дата заполнения опросного листа', type: 'text' }, // type changed to text for consistent display
+            { id: 'date', label: 'Дата заполнения опросного листа', type: 'text' },
             { id: 'company', label: 'Название компании', type: 'text' },
             { id: 'contact_person', label: 'Контактное лицо', type: 'text' },
             { id: 'phone', label: 'Телефон', type: 'text' },
@@ -777,7 +780,6 @@
             });
 
             // Обработка динамических элементов (Ca до U, легкие элементы)
-            // Эти контейнеры находятся внутри секции анализатора, поэтому их нужно найти в клоне.
             activeSection.querySelectorAll('div[id$="elements-ca-u"], div[id$="light-elements"]').forEach(originalDynamicContainer => {
                 saveDynamicValues(originalDynamicContainer.id); // Убеждаемся, что данные актуальны
                 const dynamicElements = dynamicElementData[originalDynamicContainer.id];
@@ -804,25 +806,28 @@
                 scale: 2, 
                 useCORS: true,
                 logging: true,
-                windowWidth: pdfRenderContainer.scrollWidth > 0 ? pdfRenderContainer.scrollWidth : 210 * (96 / 25.4), // Fallback to A4 width in pixels if scrollWidth is 0
-                windowHeight: pdfRenderContainer.scrollHeight > 0 ? pdfRenderContainer.scrollHeight : 297 * (96 / 25.4) // Fallback to A4 height in pixels
+                windowWidth: pdfRenderContainer.scrollWidth > 0 ? pdfRenderContainer.scrollWidth : 210 * (96 / 25.4),
+                windowHeight: pdfRenderContainer.scrollHeight > 0 ? pdfRenderContainer.scrollHeight : 297 * (96 / 25.4)
             },
             jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' , margin: [10, 10, 10, 10] }, 
             pagebreak: { mode: ['avoid-all', 'css', 'legacy'] }
         };
 
-        let pdfBlob;
+        let pdfBlob = null; // Инициализируем null
         try {
             // Небольшая задержка, чтобы браузер успел отрендерить невидимую обертку
             await new Promise(resolve => setTimeout(resolve, 300));
-            pdfBlob = await html2pdf().set(opt).from(pdfRenderContainer).outputPdf('blob');
+            // Здесь мы НЕ будем вызывать html2pdf, а просто вернем null для отладки
+            // pdfBlob = await html2pdf().set(opt).from(pdfRenderContainer).outputPdf('blob');
+            console.log("PDF generation skipped for debugging purposes. Check the red box on the page.");
         } finally {
             // Удаляем временную обертку из DOM после генерации PDF
-            if (document.body.contains(pdfRenderContainer)) {
-                document.body.removeChild(pdfRenderContainer);
-            }
+            // В режиме отладки мы ее не удаляем, чтобы пользователь мог ее видеть
+            // if (document.body.contains(pdfRenderContainer)) {
+            //     document.body.removeChild(pdfRenderContainer);
+            // }
         }
-        return pdfBlob;
+        return pdfBlob; // Вернем null, чтобы не пытаться отправить пустой PDF
     }
 
     async function sendToGoogleSheet(formData, pdfBase64, installationPhotoDataUrl) {
@@ -835,7 +840,8 @@
 
         const payload = {
             ...formData,
-            pdf_attachment_base64: pdfBase64 || '',
+            // В режиме отладки pdf_attachment_base64 будет пустым
+            pdf_attachment_base64: pdfBase64 || '', 
             installation_photo_base64: installationPhotoDataUrl || ''
         };
 
@@ -918,14 +924,9 @@
                 }
             }
 
-            // Generate PDF if selected
+            // Generate PDF if selected - теперь это временно отключено для отладки
             if (sendPdfCheckbox.checked) {
-                const pdfBlob = await generatePDFBlob();
-                pdfBase64 = await blobToBase64(pdfBlob);
-                console.log("PDF Base64 generated. Length:", pdfBase64 ? pdfBase64.length : 0);
-                if (!pdfBase64 || pdfBase64.length < 100) { // Простая проверка на минимальную длину
-                    console.error("Сгенерированный PDF Base64 кажется слишком коротким или пустым.");
-                }
+                pdfBase64 = await generatePDFBlob(); // generatePDFBlob теперь просто отображает HTML и возвращает null
             }
             
             // --- Отправка в Google Sheet ---
@@ -960,8 +961,8 @@
                     Array.from(currentMaterialSection.querySelectorAll('input[type="checkbox"]')).map(el => [el.name, el.checked ? 'Да' : 'Нет'])
                 ),
                 
-                // Base64 вложения
-                pdf_attachment_base64: pdfBase64 || '',
+                // Base64 вложения - pdfBase64 будет null в режиме отладки
+                pdf_attachment_base64: pdfBase64 || '', 
                 installation_photo_base64: installationPhotoDataUrl || ''
             };
 
