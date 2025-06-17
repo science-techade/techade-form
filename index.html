@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Опросный лист по техпроцессу</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- EmailJS SDK удален, так как отправка теперь идет только через Google Apps Script. -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
@@ -20,7 +19,7 @@
         }
         /* Стили для PDF - скрываем элементы управления, которые не нужны в PDF */
         @media print {
-            .btn, .form-control[type="file"], .attachment-checkbox { /* Добавлено .attachment-checkbox для скрытия чекбокс-ов в PDF */
+            .btn, .form-control[type="file"], .attachment-checkbox {
                 display: none !important;
             }
             /* Убедимся, что поля формы правильно отображаются в PDF */
@@ -44,35 +43,6 @@
                 padding: 0 !important;
                 margin: 0 !important;
             }
-        }
-        /* Стили для временного отладочного превью */
-        #debug-pdf-preview {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(255, 255, 255, 0.9); /* Полупрозрачный белый фон */
-            z-index: 10000; /* Поверх всего */
-            overflow: auto;
-            padding: 20px;
-            box-sizing: border-box;
-            display: none; /* По умолчанию скрыто */
-            border: 5px solid red; /* Яркая рамка для отладки */
-        }
-        #debug-pdf-preview-content {
-            background: white;
-            padding: 20px;
-            border: 1px solid #ccc;
-            max-width: 210mm; /* Размер A4 */
-            margin: 20px auto;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-        }
-        #debug-pdf-preview button {
-            margin-top: 20px;
-            display: block;
-            margin-left: auto;
-            margin-right: auto;
         }
     </style>
 </head>
@@ -482,14 +452,6 @@
 
     <div id="error-message" class="alert alert-danger mt-3" style="display: none;"></div>
 
-    <!-- Debug PDF preview window -->
-    <div id="debug-pdf-preview">
-        <div id="debug-pdf-preview-content">
-            <!-- Content to be cloned for PDF will appear here -->
-        </div>
-        <button id="close-debug-preview" class="btn btn-secondary">Закрыть превью отладки</button>
-    </div>
-
 </div>
 
 <script>
@@ -612,11 +574,6 @@
                 await submitForm();
             });
         }
-
-        // Event listener for closing the debug preview
-        document.getElementById('close-debug-preview').addEventListener('click', () => {
-            document.getElementById('debug-pdf-preview').style.display = 'none';
-        });
     });
 
     async function blobToBase64(blob) {
@@ -634,7 +591,9 @@
         });
     }
 
-    function generateExcelBlob() { // This function is still present but not called from submitForm
+    // This function is no longer used, as Excel attachment option was removed.
+    // Kept for reference but not called.
+    function generateExcelBlob() {
         const form = document.getElementById("form");
         const material = form.material.value;
         const dataRows = [];
@@ -754,24 +713,26 @@
             }
         }
 
-        // --- PDF Debugging Feature ---
-        // Display the cloned content in a debug preview window
-        const debugPreviewContent = document.getElementById('debug-pdf-preview-content');
-        const debugPreviewWindow = document.getElementById('debug-pdf-preview');
-        debugPreviewContent.innerHTML = ''; // Clear previous content
-        debugPreviewContent.appendChild(clone.cloneNode(true)); // Append a fresh clone for preview
-        debugPreviewWindow.style.display = 'block'; // Show the debug window
-
-
         const wrapper = document.createElement("div");
-        // These styles make the wrapper effectively invisible and off-screen for html2canvas
-        // but still part of the DOM for rendering.
-        wrapper.style.cssText = "position: absolute; top: 0px; left: 0px; width: 210mm; padding: 20mm; box-sizing: border-box; background: white; z-index: -1;"; // Adjusted padding and z-index
-
-        // Append to body temporarily for html2canvas to render
+        // Using fixed position, top 0, left 0, and opacity 0 to ensure it's renderable but invisible
+        wrapper.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 210mm; /* A4 width for rendering */
+            height: 297mm; /* A4 height for rendering */
+            padding: 20mm;
+            box-sizing: border-box;
+            background: white;
+            opacity: 0; /* Make it completely invisible */
+            pointer-events: none; /* Ensure no interaction */
+            z-index: -1000; /* Behind everything else */
+            overflow: hidden; /* Prevent scrollbars from appearing */
+        `;
+        // Append the prepared clone to the wrapper
         wrapper.appendChild(clone);
+        // Append the wrapper to the body
         document.body.appendChild(wrapper);
-
 
         const opt = {
             filename: 'oprosny_list.pdf',
@@ -786,20 +747,19 @@
 
         let pdfBlob;
         try {
-            // Delay PDF generation slightly to ensure debug preview is visible
-            await new Promise(resolve => setTimeout(resolve, 500)); 
+            // A small delay before html2pdf starts to ensure browser has rendered the hidden wrapper
+            await new Promise(resolve => setTimeout(resolve, 100));
             pdfBlob = await html2pdf().set(opt).from(wrapper).outputPdf('blob');
         } finally {
             // Make sure the wrapper is removed after PDF generation
             if (document.body.contains(wrapper)) {
                 document.body.removeChild(wrapper);
             }
-            // debugPreviewWindow.style.display = 'none'; // Keep debug window open for user inspection
         }
         return pdfBlob;
     }
 
-    async function sendToGoogleSheet(formData, pdfBase64, installationPhotoDataUrl) { // Removed excelBase64 parameter
+    async function sendToGoogleSheet(formData, pdfBase64, installationPhotoDataUrl) {
         if (!GOOGLE_SHEET_WEB_APP_URL || GOOGLE_SHEET_WEB_APP_URL === 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE') {
             console.error("GOOGLE_SHEET_WEB_APP_URL не установлен. Отправка в Google Sheet пропущена.");
             return;
@@ -807,8 +767,8 @@
 
         const payload = {
             ...formData,
-            pdf_attachment_base64: pdfBase64 || '', // Add PDF Base64
-            installation_photo_base64: installationPhotoDataUrl || '' // Add photo Base64
+            pdf_attachment_base64: pdfBase64 || '',
+            installation_photo_base64: installationPhotoDataUrl || ''
         };
 
         try {
@@ -819,19 +779,14 @@
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(payload),
-                mode: 'no-cors' // Важно для CORS при отправке на Google Apps Script
+                mode: 'no-cors'
             });
 
-            // Поскольку mode: 'no-cors', response.ok всегда будет true, а status - 0.
-            // Проверка успеха должна быть сделана на стороне Apps Script.
-            // Для отладки в браузере, можно ориентироваться на отсутствие ошибок сети.
             console.log("Запрос в Google Sheet отправлен. Ответ (может быть пустым из-за no-cors mode):", response);
-            alert("Данные отправлены!"); // Изменено на "Данные отправлены!"
+            alert("Данные отправлены!");
 
         } catch (error) {
             console.error("Ошибка при отправке в Google Sheet:", error);
-            // alert("Ошибка при отправке в Google Таблицу. Проверьте консоль.");
-            // Не выводим alert, так как это может быть ложное срабатывание из-за no-cors
         }
     }
 
@@ -901,9 +856,6 @@
                 console.log("PDF Base64 generated. Length:", pdfBase64 ? pdfBase64.length : 0);
                 if (!pdfBase64 || pdfBase64.length < 100) { // Простая проверка на минимальную длину
                     console.error("Сгенерированный PDF Base64 кажется слишком коротким или пустым.");
-                    // Можно также добавить сообщение на UI, если это критично:
-                    // errorMessageDiv.textContent = "Ошибка генерации PDF: файл слишком мал или пуст.";
-                    // errorMessageDiv.style.display = 'block';
                 }
             }
             
