@@ -28,21 +28,7 @@
                 background-color: transparent !important;
                 padding: 0 !important;
             }
-            .form-check-input {
-                visibility: hidden; /* Скрываем реальный чекбокс */
-            }
-            .form-check-label::before {
-                content: attr(data-checked); /* Используем атрибут для отображения */
-                margin-right: 5px;
-                font-size: 1.2em;
-            }
-            /* Дополнительные стили для PDF, чтобы избежать обрезки контента */
-            .container {
-                width: 100% !important;
-                max-width: none !important;
-                padding: 0 !important;
-                margin: 0 !important;
-            }
+            /* Old checkbox print styles removed as we replace the entire form-check div */
         }
     </style>
 </head>
@@ -654,28 +640,55 @@
         clone.querySelectorAll("input, select, textarea").forEach(el => {
             if (el.type === "hidden" || el.type === "file" || el.tagName === 'BUTTON') return;
 
-            const div = document.createElement("div");
-            div.style.padding = "4px 8px";
-            div.style.border = "1px solid #ccc";
-            div.style.borderRadius = "3px";
-            div.style.minHeight = "20px";
-            div.style.marginBottom = "4px";
-            div.style.backgroundColor = "#f9f9f9";
-            div.style.fontSize = "13px";
-
+            // Специальная обработка для чекбоксов
             if (el.type === "checkbox") {
-                div.textContent = el.checked ? "Да" : "Нет";
-                // Set a data attribute on the label for PDF rendering
-                const label = el.closest(".form-check").querySelector("label");
-                if (label) {
-                    label.setAttribute("data-checked", el.checked ? "✔" : "✖");
+                const formCheckDiv = el.closest(".form-check");
+                const label = formCheckDiv ? formCheckDiv.querySelector("label") : null;
+                const labelText = label ? label.textContent.trim() : el.name; // Получаем текст метки или имя
+                const status = el.checked ? "Да" : "Нет";
+
+                const newTextDiv = document.createElement("div");
+                newTextDiv.textContent = `${labelText}: ${status}`;
+                newTextDiv.style.padding = "4px 8px";
+                newTextDiv.style.border = "1px solid #ccc";
+                newTextDiv.style.borderRadius = "3px";
+                newTextDiv.style.minHeight = "20px";
+                newTextDiv.style.marginBottom = "4px";
+                newTextDiv.style.backgroundColor = "#f9f9f9";
+                newTextDiv.style.fontSize = "13px";
+
+                if (formCheckDiv) {
+                    formCheckDiv.replaceWith(newTextDiv); // Заменяем весь .form-check div
+                } else {
+                    el.replaceWith(newTextDiv); // Fallback, если .form-check не найден
                 }
-            } else if (el.tagName === "SELECT") {
-                div.textContent = el.options[el.selectedIndex]?.text || "—";
-            } else {
-                div.textContent = el.value?.trim() || "—";
             }
-            el.replaceWith(div);
+            // Обработка для select элементов
+            else if (el.tagName === "SELECT") {
+                const div = document.createElement("div");
+                div.textContent = el.options[el.selectedIndex]?.text || "—";
+                div.style.padding = "4px 8px";
+                div.style.border = "1px solid #ccc";
+                div.style.borderRadius = "3px";
+                div.style.minHeight = "20px";
+                div.style.marginBottom = "4px";
+                div.style.backgroundColor = "#f9f9f9";
+                div.style.fontSize = "13px";
+                el.replaceWith(div);
+            }
+            // Обработка для всех остальных текстовых полей
+            else {
+                const div = document.createElement("div");
+                div.textContent = el.value?.trim() || "—";
+                div.style.padding = "4px 8px";
+                div.style.border = "1px solid #ccc";
+                div.style.borderRadius = "3px";
+                div.style.minHeight = "20px";
+                div.style.marginBottom = "4px";
+                div.style.backgroundColor = "#f9f9f9";
+                div.style.fontSize = "13px";
+                el.replaceWith(div);
+            }
         });
 
         const allDynamicContainers = Array.from(document.querySelectorAll('div[id$="elements-ca-u"], div[id$="light-elements"], div[id$="sinter-elements-ca-u"], div[id$="multiplex-elements-ca-u"], div[id$="multiplex-light-elements"], div[id$="courier-elements-ca-u"], div[id$="courier-light-elements"]')).map(el => el.id);
@@ -715,13 +728,14 @@
 
         const wrapper = document.createElement("div");
         // Using fixed position, top 0, left 0, and opacity 0 to ensure it's renderable but invisible
+        // Increased padding to ensure content is not clipped by PDF margins
         wrapper.style.cssText = `
             position: fixed;
             top: 0;
             left: 0;
             width: 210mm; /* A4 width for rendering */
             height: 297mm; /* A4 height for rendering */
-            padding: 20mm;
+            padding: 20mm; /* Increased padding */
             box-sizing: border-box;
             background: white;
             opacity: 0; /* Make it completely invisible */
@@ -748,7 +762,7 @@
         let pdfBlob;
         try {
             // A small delay before html2pdf starts to ensure browser has rendered the hidden wrapper
-            await new Promise(resolve => setTimeout(resolve, 100));
+            await new Promise(resolve => setTimeout(resolve, 300)); // Increased delay
             pdfBlob = await html2pdf().set(opt).from(wrapper).outputPdf('blob');
         } finally {
             // Make sure the wrapper is removed after PDF generation
