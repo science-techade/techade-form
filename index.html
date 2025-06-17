@@ -906,10 +906,10 @@
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify(payload),
-                mode: 'no-cors'
+                // УДАЛЕНО: mode: 'no-cors' - это было причиной проблем с данными
             });
 
-            console.log("sendToGoogleSheet: Request sent. Response (may be empty due to no-cors mode):", response);
+            console.log("sendToGoogleSheet: Request sent. Response:", response);
             alert("Данные отправлены!");
 
         } catch (error) {
