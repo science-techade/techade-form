@@ -547,6 +547,7 @@
             wrapper.appendChild(inputRange);
             wrapper.appendChild(removeBtn);
             container.appendChild(wrapper);
+
         });
     }
 
@@ -626,7 +627,7 @@
             const reader = new FileReader();
             reader.onloadend = () => {
                 console.log("blobToBase64: FileReader result (Data URL start):", reader.result ? reader.result.substring(0, 100) + '...' : 'null or empty');
-                const base64String = reader.result ? reader.result.split(',')[1] : null;
+                const base64String = reader.result ? String(reader.result).split(',')[1] : null; // Ensure result is string before split
                 if (!base64String) {
                     console.error("blobToBase64: Base64 string is empty or null after splitting.");
                     alert("Ошибка: Не удалось извлечь Base64 строку из PDF Blob.");
