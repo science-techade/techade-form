@@ -7,7 +7,6 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!-- EmailJS SDK -->
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script type="text/javascript">
         // Инициализация EmailJS с вашим публичным ключом.
@@ -86,10 +85,10 @@
             padding-bottom: 5px;
         }
         .pdf-sub-section-title {
-             margin-top: 15px;
-             margin-bottom: 8px;
-             font-size: 1.1rem;
-             font-weight: 500;
+            margin-top: 15px;
+            margin-bottom: 8px;
+            font-size: 1.1rem;
+            font-weight: 500;
         }
     </style>
 </head>
@@ -481,7 +480,6 @@
             </div>
         </div>
         <div class="mb-3 mt-4">
-            <!-- New checkboxes for attachment control -->
             <div class="form-check attachment-checkbox">
                 <input class="form-check-input" type="checkbox" id="sendPdf" checked>
                 <label class="form-check-label" for="sendPdf">Отправить PDF вложение</label>
@@ -497,17 +495,16 @@
     <iframe id="pdf-preview" style="width: 100%; height: 500px; margin-top: 20px; display: none;"></iframe>
 
     <div id="error-message" class="alert alert-danger mt-3" style="display: none;"></div>
+    <div id="success-message" class="alert alert-success mt-3" style="display: none;"></div>
 
 </div>
 
 <script>
     // Идентификаторы EmailJS. Замените их на свои, полученные после настройки EmailJS.
-    // Если вы не видите эти ключи, это нормально, пока вы не настроите EmailJS.
-    // Они будут использоваться в функции submitForm.
     const EMAILJS_SERVICE_ID = 'service_1rnpxea'; // Ваш Service ID из EmailJS
     const EMAILJS_TEMPLATE_ID = 'template_sk137ts'; // Ваш Template ID из EmailJS (для вашей формы)
-    // ВАЖНО: Email адрес, который вы получите из Google Apps Script для триггера "При получении нового письма"!
-    const APPS_SCRIPT_RECIPIENT_EMAIL = 'https://script.google.com/macros/s/AKfycbyEzbhpH4nvNXElM6N_krHMJo_GO5ZFWMv21OZzz0OnAE8jRb8c8o0wu2HpL_wfLV2H/exec'; 
+    // ВАЖНО: ЗАМЕНИТЕ ЭТОТ URL НА РАЗВЕРНУТЫЙ URL ВАШЕГО GOOGLE APPS SCRIPT!
+    const GOOGLE_SHEET_MACRO_URL = 'https://script.google.com/macros/s/AKfycbzkOZ-Qo4-7_-ZYIL2IOm5qyIkK1YjNDoRK0cYvs0PUL3RPSILWAG3kYkYq6tkpu1vafg/exec';
 
     const dynamicElementData = {};
 
@@ -567,553 +564,15 @@
         });
     }
 
-    const containers = Array.from(document.querySelectorAll('div[id$="elements-ca-u"], div[id$="light-elements"]')).map(el => el.id);
-
-    function showAnalyzerSection(materialType) {
-        const sections = document.querySelectorAll('.analyzer-section');
-        sections.forEach(section => section.style.display = 'none');
-
-        const selectedSection = document.getElementById(`section-${materialType}`);
-        if (selectedSection) {
-            selectedSection.style.display = 'block';
-        }
-    }
-
-    function bindPhotoPreview(materialType) {
-        const input = document.getElementById(`installation_photo_${materialType}`);
-        const preview = document.getElementById(`installation_preview_${materialType}`);
-
-        if (!input || !preview) return;
-
-        input.addEventListener("change", (event) => {
-            const file = event.target.files[0];
-            if (file && file.type.startsWith("image/")) {
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    preview.src = e.target.result;
-                    preview.style.display = "block";
-                    input.dataset.jpeg = e.target.result; // Сохраняем Data URL для PDF
-                    console.log(`Image Data URL for ${materialType}:`, e.target.result.substring(0, 100) + '...'); // Log a portion of the data URL
-                };
-                reader.readAsDataURL(file);
-            } else {
-                preview.style.display = "none";
-                preview.src = "";
-                input.dataset.jpeg = ""; // Очищаем Data URL
-                console.log(`Image cleared for ${materialType}`);
-            }
-        });
-    }
-
-    document.addEventListener("DOMContentLoaded", function () {
-        const materialSelect = document.getElementById("material");
-        if (materialSelect) {
-            materialSelect.addEventListener("change", () => {
-                showAnalyzerSection(materialSelect.value);
-                containers.forEach(restoreDynamicValues);
-            });
-            showAnalyzerSection(materialSelect.value);
-            containers.forEach(restoreDynamicValues);
-        }
-
-        ["pulp", "sinter", "multiplex", "courier"].forEach(bindPhotoPreview);
-
-        const submitBtn = document.getElementById("submit-button");
-        if (submitBtn) {
-            submitBtn.addEventListener("click", async (event) => {
-                event.preventDefault();
-                await submitForm();
-            });
+    const containers = Array.from(document.querySelectorAll("[id$='-elements-ca-u'], [id$='-light-elements']")).map(el => el.id);
+    containers.forEach(containerId => {
+        // Инициализируем данные для каждого контейнера
+        dynamicElementData[containerId] = [];
+        // Добавляем начальный элемент для каждого контейнера, если он пуст
+        if (document.getElementById(containerId).children.length === 0) {
+            addElementRow(containerId);
         }
     });
-
-    async function blobToBase64(blob) {
-        console.log("blobToBase64: Starting conversion.");
-        if (!blob) {
-            console.error("blobToBase64: Input blob is null or undefined.");
-            return null;
-        }
-        if (!(blob instanceof Blob)) {
-            console.error("blobToBase64: Input is not a Blob object. Type:", typeof blob);
-            return null;
-        }
-        console.log("blobToBase64: Blob size:", blob.size, "bytes");
-
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                console.log("blobToBase64: FileReader result (Data URL start):", reader.result ? String(reader.result).substring(0, 100) + '...' : 'null or empty');
-                const base64String = reader.result ? String(reader.result).split(',')[1] : null; // Ensure result is string before split
-                if (!base64String) {
-                    console.error("blobToBase64: Base64 string is empty or null after splitting.");
-                    resolve(null); 
-                    return;
-                }
-                console.log("blobToBase64: Conversion complete. Base64 length:", base64String.length);
-                resolve(base64String);
-            };
-            reader.onerror = (error) => {
-                console.error("blobToBase64: FileReader error:", error);
-                reject(error); 
-            };
-            reader.readAsDataURL(blob);
-        });
-    }
-
-    function generateExcelBlob() {
-        const form = document.getElementById("form");
-        const material = form.material.value;
-        const dataRows = [];
-        const push = (label, val) => dataRows.push([label, val || "—"]);
-
-        push("Дата", form.date.value);
-        push("Компания", form.company.value);
-        push("Контактное лицо", form.contact_person.value);
-        push("Телефон", form.phone.value);
-        push("Email", form.email.value);
-        push("Страна", form.country.value);
-        push("Отчет от", form.location.value);
-        push("Тип материала", material);
-
-        const section = document.getElementById(`section-${material}`);
-        if (section) {
-            section.querySelectorAll("input, select, textarea").forEach(input => {
-                if (input.type === "file" || input.tagName === 'BUTTON') return;
-
-                const labelElement = input.closest(".mb-3")?.querySelector("label") || input.closest(".form-check")?.querySelector("label");
-                const label = labelElement ? labelElement.textContent?.trim().replace('*', '') : input.name;
-                const value = input.type === "checkbox" ? (input.checked ? "Да" : "Нет") : input.value;
-                push(label, value);
-            });
-        }
-
-        const allDynamicContainers = Array.from(document.querySelectorAll('div[id$="elements-ca-u"], div[id$="light-elements"], div[id$="sinter-elements-ca-u"], div[id$="multiplex-elements-ca-u"], div[id$="multiplex-light-elements"], div[id$="courier-elements-ca-u"], div[id$="courier-light-elements"]')).map(el => el.id);
-
-        allDynamicContainers.forEach(id => {
-            saveDynamicValues(id);
-            const dynamicElements = dynamicElementData[id];
-            if (dynamicElements && dynamicElements.length > 0) {
-                push(`--- Элементы из ${id} ---`, "");
-                dynamicElements.forEach(entry => {
-                    push(`Элемент: ${entry.element || '—'}`, `Диапазон: ${entry.range || '—'}`);
-                });
-            }
-        });
-
-        const worksheet = XLSX.utils.aoa_to_sheet(dataRows);
-        const workbook = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(workbook, worksheet, "Опросный лист");
-        const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-        return new Blob([wbout], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-    }
-
-    async function generatePDFBlob() {
-        console.log("generatePDFBlob: Starting PDF content generation.");
-        const form = document.getElementById("form");
-        const materialType = form.material.value;
-
-        // Создаем контейнер, который будет содержать HTML для PDF
-        let pdfRenderContainer = document.getElementById('debug-pdf-render-container');
-        if (!pdfRenderContainer) {
-            pdfRenderContainer = document.createElement('div');
-            pdfRenderContainer.id = 'debug-pdf-render-container'; // Добавляем ID для легкого поиска
-            pdfRenderContainer.className = 'pdf-render-container';
-            document.body.appendChild(pdfRenderContainer);
-            console.log("generatePDFBlob: pdfRenderContainer created and appended to body.");
-        } else {
-            console.log("generatePDFBlob: pdfRenderContainer already exists, reusing.");
-        }
-        
-        pdfRenderContainer.innerHTML = ''; // Очищаем от отладочных сообщений
-        console.log("generatePDFBlob: pdfRenderContainer cleared.");
-
-        // Добавляем статическую тестовую строку для отладки рендеринга
-        const testParagraph = document.createElement('p');
-        testParagraph.textContent = 'Тестовая строка для PDF. Если вы это видите, рендеринг работает.';
-        testParagraph.style.color = 'blue';
-        testParagraph.style.fontSize = '16px';
-        pdfRenderContainer.appendChild(testParagraph);
-
-        // Добавляем заголовок формы
-        const formTitle = document.createElement('h2');
-        formTitle.className = 'pdf-section-title';
-        formTitle.textContent = 'Опросный лист по техпроцессу';
-        pdfRenderContainer.appendChild(formTitle);
-        console.log("generatePDFBlob: Form title added.");
-
-        // --- Обработка основных сведений ---
-        const mainInfoSection = document.createElement('div');
-        mainInfoSection.className = 'mb-4';
-        const mainInfoTitle = document.createElement('h5');
-        mainInfoTitle.className = 'pdf-h5';
-        mainInfoTitle.textContent = 'Основные сведения';
-        mainInfoSection.appendChild(mainInfoTitle);
-        
-        const mainFields = [
-            { id: 'date', label: 'Дата заполнения опросного листа', type: 'text' },
-            { id: 'company', label: 'Название компании', type: 'text' },
-            { id: 'contact_person', label: 'Контактное лицо', type: 'text' },
-            { id: 'phone', label: 'Телефон', type: 'text' },
-            { id: 'email', label: 'Email', type: 'text' },
-            { id: 'country', label: 'Страна', type: 'text' },
-            { id: 'location', label: 'Местонахождение', type: 'text' }
-        ];
-
-        mainFields.forEach(field => {
-            const inputElement = document.getElementById(field.id);
-            if (inputElement) {
-                const displayDiv = document.createElement('div');
-                displayDiv.className = 'pdf-field-display';
-                displayDiv.innerHTML = `<strong>${field.label.replace('*', '').trim()}:</strong> ${inputElement.value || '—'}`;
-                mainInfoSection.appendChild(displayDiv);
-            } else {
-                console.warn(`generatePDFBlob: Main field element not found: ${field.id}`);
-            }
-        });
-        pdfRenderContainer.appendChild(mainInfoSection);
-        console.log("generatePDFBlob: Main info fields processed.");
-
-        // --- Тип анализируемого материала ---
-        const materialSelect = document.getElementById('material');
-        if (materialSelect) {
-            const displayDiv = document.createElement('div');
-            displayDiv.className = 'pdf-field-display';
-            displayDiv.innerHTML = `<strong>Тип анализируемого материала:</strong> ${materialSelect.options[materialSelect.selectedIndex]?.text || '—'}`;
-            pdfRenderContainer.appendChild(displayDiv);
-        } else {
-            console.warn("generatePDFBlob: Material select element not found.");
-        }
-        console.log("generatePDFBlob: Material type processed.");
-
-        // --- Обработка секции анализатора ---
-        const activeSectionId = `section-${materialType}`;
-        const activeSection = document.getElementById(activeSectionId);
-
-        if (activeSection) {
-            const sectionTitle = document.createElement('h5');
-            sectionTitle.className = 'pdf-section-title';
-            sectionTitle.textContent = activeSection.querySelector('h5')?.textContent || 'Детали анализатора';
-            pdfRenderContainer.appendChild(sectionTitle);
-            console.log(`generatePDFBlob: Active section (${materialType}) title added.`);
-
-            // Собираем все поля из активной секции
-            activeSection.querySelectorAll('input, select, textarea').forEach(el => {
-                if (el.type === 'hidden' || el.tagName === 'BUTTON') {
-                    return;
-                }
-
-                const displayDiv = document.createElement('div');
-                displayDiv.className = 'pdf-field-display';
-
-                const labelElement = el.closest('.mb-3')?.querySelector('label') || el.closest('.form-check')?.querySelector('label');
-                const labelText = labelElement ? labelElement.textContent.trim().replace('*', '') : el.name; // Fallback to name if no label
-
-                if (el.type === 'checkbox') {
-                    displayDiv.innerHTML = `<strong>${labelText}:</strong> ${el.checked ? 'Да' : 'Нет'}`;
-                } else if (el.type === 'file') {
-                    const originalFileInput = document.getElementById(el.id);
-                    const fileName = originalFileInput && originalFileInput.files && originalFileInput.files.length > 0 ? originalFileInput.files[0].name : '—';
-                    displayDiv.innerHTML = `<strong>${labelText}:</strong> ${fileName}`;
-                    
-                    const jpegData = originalFileInput ? originalFileInput.dataset?.jpeg : null;
-                    if (jpegData) {
-                        const img = document.createElement('img');
-                        img.src = jpegData;
-                        img.style.maxWidth = '100%';
-                        img.style.height = 'auto';
-                        img.style.marginTop = '5px';
-                        img.style.border = '1px solid #ddd';
-                        img.style.pageBreakInside = 'avoid';
-                        pdfRenderContainer.appendChild(img);
-                        console.log(`generatePDFBlob: Image for ${el.id} added.`);
-                    } else {
-                        console.log(`generatePDFBlob: No image data for file input ${el.id}`);
-                    }
-                } else if (el.tagName === 'SELECT') {
-                    const originalSelect = document.getElementById(el.id);
-                    const selectedText = originalSelect ? originalSelect.options[originalSelect.selectedIndex]?.text : '—';
-                    displayDiv.innerHTML = `<strong>${labelText}:</strong> ${selectedText}`;
-                } else {
-                    displayDiv.innerHTML = `<strong>${labelText}:</strong> ${el.value || '—'}`;
-                }
-                pdfRenderContainer.appendChild(displayDiv);
-            });
-            console.log("generatePDFBlob: Active section fields processed.");
-
-            // Обработка динамических элементов (Ca до U, легкие элементы)
-            activeSection.querySelectorAll('div[id$="elements-ca-u"], div[id$="light-elements"]').forEach(originalDynamicContainer => {
-                saveDynamicValues(originalDynamicContainer.id);
-                const dynamicElements = dynamicElementData[originalDynamicContainer.id];
-
-                if (dynamicElements && dynamicElements.length > 0) {
-                    const dynamicSectionTitle = document.createElement('h5');
-                    dynamicSectionTitle.className = 'pdf-sub-section-title';
-                    dynamicSectionTitle.textContent = originalDynamicContainer.previousElementSibling?.textContent || 'Элементы';
-                    pdfRenderContainer.appendChild(dynamicSectionTitle);
-                    console.log(`generatePDFBlob: Dynamic section title added for ${originalDynamicContainer.id}.`);
-
-                    dynamicElements.forEach(entry => {
-                        const elementDiv = document.createElement('div');
-                        elementDiv.className = 'pdf-field-display';
-                        elementDiv.textContent = `Элемент: ${entry.element || '—'}, Диапазон: ${entry.range || '—'}`;
-                        pdfRenderContainer.appendChild(elementDiv);
-                    });
-                    console.log(`generatePDFBlob: Dynamic elements for ${originalDynamicContainer.id} processed.`);
-                } else {
-                    console.log(`generatePDFBlob: No dynamic elements found for ${originalDynamicContainer.id}.`);
-                }
-            });
-        } else {
-            console.warn(`generatePDFBlob: Active section with ID ${activeSectionId} not found.`);
-        }
-        
-        // Логируем HTML-содержимое, которое будет захвачено для PDF
-        console.log("generatePDFBlob: InnerHTML of pdfRenderContainer before html2pdf:", pdfRenderContainer.innerHTML.substring(0, 500) + '...');
-
-
-        // Настройка опций для html2pdf
-        const opt = {
-            filename: 'oprosny_list.pdf',
-            html2canvas: { 
-                scale: 2, 
-                useCORS: true,
-                logging: true,
-            },
-            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' , margin: [10, 10, 10, 10] }, 
-        };
-
-        let pdfBlob = null;
-        try {
-            console.log("generatePDFBlob: Starting html2pdf generation.");
-            await new Promise(resolve => setTimeout(resolve, 300));
-            pdfBlob = await html2pdf().set(opt).from(pdfRenderContainer).outputPdf('blob');
-            console.log("generatePDFBlob: html2pdf generation completed.");
-            if (pdfBlob) {
-                console.log(`generatePDFBlob: PDF Blob generated! Size: ${pdfBlob.size} bytes.`);
-            } else {
-                console.error("generatePDFBlob: PDF Blob is NULL! Something went wrong with html2pdf generation.");
-                alert("Ошибка: PDF Blob равен NULL. Проверьте консоль на ошибки html2pdf.");
-            }
-        } catch (error) {
-            console.error("generatePDFBlob: Error during html2pdf generation:", error);
-            alert(`Ошибка при генерации PDF: ${error.message}. Проверьте консоль.`);
-            return null;
-        } finally {
-            if (document.body.contains(pdfRenderContainer)) {
-                document.body.removeChild(pdfRenderContainer);
-                console.log("generatePDFBlob: pdfRenderContainer removed from DOM.");
-            }
-        }
-        return pdfBlob;
-    }
-
-    async function submitForm() {
-        console.log("submitForm: Function started.");
-        const form = document.getElementById("form");
-        const emailInput = form.email;
-        const materialSelect = form.material;
-        const errorMessageDiv = document.getElementById("error-message");
-        const sendPdfCheckbox = document.getElementById("sendPdf");
-
-        errorMessageDiv.style.display = 'none';
-        errorMessageDiv.textContent = '';
-        emailInput.classList.remove('is-invalid');
-        materialSelect.classList.remove('is-invalid');
-
-        if (!form.checkValidity()) {
-            errorMessageDiv.textContent = "Пожалуйста, заполните все обязательные поля формы.";
-            errorMessageDiv.style.display = 'block';
-            form.reportValidity();
-            console.log("submitForm: Form validation failed.");
-            return;
-        }
-        console.log("submitForm: Form validation passed.");
-
-        const email = emailInput.value;
-        const material = materialSelect.value;
-
-        let pdfBase64 = ''; 
-        let installationPhotoDataUrl = ''; 
-        let excelBase64 = ''; 
-        let templateParams = {}; // Используем templateParams для сбора всех данных
-
-        try {
-            // Collect all form data for EmailJS template
-            const formElements = form.elements;
-            for (let i = 0; i < formElements.length; i++) {
-                const element = formElements[i];
-                if (element.name && element.tagName !== 'BUTTON') {
-                    if (element.type === 'file') {
-                        // Файлы будут обрабатываться отдельно как вложения
-                        continue; 
-                    } else if (element.type === 'checkbox') {
-                        templateParams[element.name] = element.checked ? "Да" : "Нет";
-                    } else if (element.tagName === 'SELECT') {
-                         templateParams[element.name] = element.options[element.selectedIndex]?.text || element.value || '';
-                    }
-                    else {
-                        templateParams[element.name] = element.value;
-                    }
-                }
-            }
-            console.log("submitForm: General form data collected for EmailJS.");
-
-            // Add dynamic elements data as stringified JSON
-            const allDynamicContainers = Array.from(document.querySelectorAll('div[id$="elements-ca-u"], div[id$="light-elements"], div[id$="sinter-elements-ca-u"], div[id$="multiplex-elements-ca-u"], div[id$="multiplex-light-elements"], div[id$="courier-elements-ca-u"], div[id$="courier-light-elements"]')).map(el => el.id);
-
-            allDynamicContainers.forEach(id => {
-                saveDynamicValues(id); // Ensure latest dynamic values are saved
-                const dynamicElements = dynamicElementData[id];
-                if (dynamicElements && dynamicElements.length > 0) {
-                    templateParams[id] = JSON.stringify(dynamicElements); 
-                } else {
-                    templateParams[id] = 'Нет данных'; // Если нет динамических элементов
-                }
-            });
-            console.log("submitForm: Dynamic elements data collected for EmailJS.");
-
-            // Get installation photo data for attachment
-            const currentMaterialSection = document.querySelector(`.analyzer-section[style*="block"]`);
-            if (currentMaterialSection) {
-                const photoInput = currentMaterialSection.querySelector('input[type="file"]');
-                if (photoInput && photoInput.dataset.jpeg) {
-                    installationPhotoDataUrl = photoInput.dataset.jpeg;
-                    console.log("submitForm: Photo Data URL to be sent:", installationPhotoDataUrl.substring(0, 100) + '...');
-                } else {
-                    console.log("submitForm: No photo data or photo input found for current section.");
-                }
-            } else {
-                console.warn("submitForm: No active material section found.");
-            }
-
-            // Generate PDF if selected
-            if (sendPdfCheckbox.checked) {
-                console.log("submitForm: sendPdfCheckbox is checked. Calling generatePDFBlob.");
-                try {
-                    const generatedPdfBlob = await generatePDFBlob();
-                    if (generatedPdfBlob) {
-                        const convertedBase64 = await blobToBase64(generatedPdfBlob);
-                        if (convertedBase64 && convertedBase64.length > 0) {
-                            pdfBase64 = convertedBase64;
-                            console.log("submitForm: PDF Base64 generated. Length:", pdfBase64.length);
-                        } else {
-                            console.error("submitForm: PDF Base64 is null or empty after conversion. PDF will not be attached.");
-                            alert("Внимание: PDF-файл не был сгенерирован (конвертация в Base64 не удалась). Он не будет прикреплен к письму.");
-                            pdfBase64 = ''; 
-                        }
-                    } else {
-                        console.error("submitForm: generatePDFBlob returned null. PDF will not be attached.");
-                        alert("Внимание: PDF-файл не был сгенерирован. Он не будет прикреплен к письму.");
-                        pdfBase64 = ''; 
-                    }
-                } catch (pdfGenError) {
-                    console.error("submitForm: Error during PDF generation or Base64 conversion:", pdfGenError);
-                    alert(`Внимание: Ошибка при генерации PDF: ${pdfGenError.message}. Он не будет прикреплен к письму.`);
-                    pdfBase64 = ''; 
-                }
-            } else {
-                console.log("submitForm: sendPdfCheckbox is NOT checked. Skipping PDF generation.");
-                pdfBase64 = ''; 
-            }
-
-            // Генерация Excel Blob и конвертация в Base64
-            console.log("submitForm: Calling generateExcelBlob to prepare Excel attachment.");
-            const generatedExcelBlob = generateExcelBlob(); // Используем синхронную функцию
-            if (generatedExcelBlob) {
-                const convertedExcelBase64 = await blobToBase64(generatedExcelBlob);
-                if (convertedExcelBase64 && convertedExcelBase64.length > 0) {
-                    excelBase64 = convertedExcelBase64;
-                    console.log("submitForm: Excel Base64 generated. Length:", excelBase64.length);
-                } else {
-                    console.error("submitForm: Excel Base64 is null or empty after conversion. Excel will not be attached.");
-                    alert("Внимание: Excel-файл не был сгенерирован (конвертация в Base64 не удалась). Он не будет прикреплен к письму.");
-                    excelBase64 = '';
-                }
-            } else {
-                console.error("submitForm: generateExcelBlob returned null. Excel will not be attached.");
-                alert("Внимание: Excel-файл не был сгенерирован. Он не будет прикреплен к письму.");
-                excelBase64 = '';
-            }
-
-            // --- Отправка через EmailJS ---
-            console.log("submitForm: Attempting to send data via EmailJS.");
-
-            // Параметры для шаблона EmailJS.
-            // to_email - это email, на который будет отправлено письмо.
-            // Мы передадим специальный email-адрес Apps Script, который будет обрабатывать письмо.
-            const emailJsTemplateParams = {
-                to_email: APPS_SCRIPT_RECIPIENT_EMAIL, // <-- Очень важно: это будет email Apps Script
-                from_company: templateParams.company || 'N/A',
-                from_email: templateParams.email || 'N/A',
-                from_date: templateParams.date || 'N/A',
-                
-                // Чтобы отправить все данные формы в текстовом виде в теле письма,
-                // мы сериализуем templateParams (которая содержит все поля)
-                // и передадим ее как один параметр в шаблон.
-                full_form_data: JSON.stringify(templateParams, null, 2), // Отправляем все данные формы как JSON строку
-            };
-
-            // Собираем вложения
-            const attachments = [];
-            if (pdfBase64 && sendPdfCheckbox.checked) {
-                attachments.push({
-                    name: "Опросный_лист.pdf", // Имя файла для Apps Script
-                    data: pdfBase64,
-                    type: "application/pdf"
-                });
-            }
-            if (excelBase64) { 
-                attachments.push({
-                    name: "Опросный_лист.xlsx", // Имя файла для Apps Script
-                    data: excelBase64,
-                    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                });
-            }
-            if (installationPhotoDataUrl) {
-                // EmailJS принимает Base64 без "data:image/..." префикса
-                const base64Content = installationPhotoDataUrl.split(',')[1];
-                let photoMimeType = 'image/png'; // По умолчанию
-                let photoFilename = 'Фото_местонахождения.png';
-
-                if (installationPhotoDataUrl.startsWith('data:image/jpeg')) {
-                    photoMimeType = 'image/jpeg';
-                    photoFilename = 'Фото_местонахождения.jpg';
-                }
-                attachments.push({
-                    name: photoFilename, // Имя файла для Apps Script
-                    data: base64Content,
-                    type: photoMimeType
-                });
-            }
-
-            await emailjs.send(
-                EMAILJS_SERVICE_ID,
-                EMAILJS_TEMPLATE_ID,
-                emailJsTemplateParams,
-                { attachments: attachments }
-            );
-
-            alert("Опросный лист успешно отправлен на ваш Email (для обработки Apps Script)!");
-            console.log("submitForm: EmailJS отправка завершена.");
-
-            // Здесь можно очистить форму после успешной отправки
-            form.reset();
-            showAnalyzerSection(''); // Скрыть все секции
-            containers.forEach(id => {
-                document.getElementById(id).innerHTML = ''; // Очистить динамические элементы
-                dynamicElementData[id] = []; // Очистить сохраненные данные
-            });
-            document.querySelectorAll('img[id^="installation_preview_"]').forEach(img => {
-                img.style.display = 'none';
-                img.src = '';
-            });
-
-        } catch (err) {
-            console.error("submitForm: Критическая ошибка при отправке формы через EmailJS:", err);
-            errorMessageDiv.textContent = `Критическая ошибка: ${err.message || "Неизвестная ошибка."} Пожалуйста, попробуйте еще раз или обратитесь в поддержку EmailJS.`;
-            errorMessageDiv.style.display = 'block';
-        }
-    }
 
     function addElementRow(containerId) {
         const container = document.getElementById(containerId);
@@ -1125,7 +584,6 @@
         inputElement.placeholder = "Элемент (напр. Fe)";
         inputElement.name = `${containerId}_element[]`;
         inputElement.className = "form-control";
-        inputElement.value = "";
         inputElement.oninput = () => saveDynamicValues(containerId);
 
         const inputRange = document.createElement("input");
@@ -1133,27 +591,409 @@
         inputRange.placeholder = "Диапазон концентрации";
         inputRange.name = `${containerId}_range[]`;
         inputRange.className = "form-control";
-        inputRange.value = "";
         inputRange.oninput = () => saveDynamicValues(containerId);
 
-        const removeBtn = document.createElement("button"); // Исправлено: createElement для кнопки
+        const removeBtn = document.createElement("button");
         removeBtn.type = "button";
-            removeBtn.className = "btn btn-outline-danger btn-sm";
-            removeBtn.textContent = "Удалить";
-            removeBtn.onclick = () => {
-                wrapper.remove();
-                saveDynamicValues(containerId);
-            };
+        removeBtn.className = "btn btn-outline-danger btn-sm";
+        removeBtn.textContent = "Удалить";
+        removeBtn.onclick = () => {
+            wrapper.remove();
+            saveDynamicValues(containerId); // Обновляем данные после удаления
+        };
 
-            wrapper.appendChild(inputElement);
-            wrapper.appendChild(inputRange);
-            wrapper.appendChild(removeBtn);
-            container.appendChild(wrapper);
+        wrapper.appendChild(inputElement);
+        wrapper.appendChild(inputRange);
+        wrapper.appendChild(removeBtn);
+        container.appendChild(wrapper);
 
-            saveDynamicValues(containerId);
+        saveDynamicValues(containerId); // Сохраняем данные при добавлении новой строки
+    }
+
+    // Обработчик для отображения/скрытия секций анализатора
+    document.getElementById('material').addEventListener('change', function() {
+        document.querySelectorAll('.analyzer-section').forEach(section => {
+            section.style.display = 'none';
+        });
+        const selectedValue = this.value;
+        if (selectedValue) {
+            const targetSection = document.getElementById(`section-${selectedValue}`);
+            if (targetSection) {
+                targetSection.style.display = 'block';
+                // Восстанавливаем данные для активной секции
+                containers.forEach(containerId => {
+                    if (containerId.startsWith(selectedValue)) {
+                        restoreDynamicValues(containerId);
+                    }
+                });
+            }
+        }
+    });
+
+    // Обработчики для предпросмотра изображений
+    document.querySelectorAll('input[type="file"]').forEach(input => {
+        input.addEventListener('change', function() {
+            const previewId = this.id.replace('installation_photo', 'installation_preview');
+            const preview = document.getElementById(previewId);
+            if (this.files && this.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    preview.src = e.target.result;
+                    preview.style.display = 'block';
+                };
+                reader.readAsDataURL(this.files[0]);
+            } else {
+                preview.src = '';
+                preview.style.display = 'none';
+            }
+        });
+    });
+
+    // --- Функции для генерации PDF ---
+    function collectFormDataForPdf() {
+        const formData = new FormData(document.getElementById('form'));
+        const data = {};
+        for (let [key, value] of formData.entries()) {
+            // Обработка чекбоксов: FormData по умолчанию не включает unchecked чекбоксы
+            if (document.querySelector(`input[name="${key}"][type="checkbox"]`) && !value) {
+                data[key] = false; // Устанавливаем false для снятых чекбоксов
+            } else {
+                data[key] = value;
+            }
         }
 
-        window.addElementRow = addElementRow;
-    </script>
+        // Добавление данных из динамических полей
+        for (const containerId in dynamicElementData) {
+            data[containerId] = dynamicElementData[containerId];
+        }
+
+        // Обработка чекбоксов, которые не включены в FormData
+        document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+            if (!formData.has(checkbox.name)) {
+                data[checkbox.name] = checkbox.checked;
+            }
+        });
+
+        return data;
+    }
+
+    async function generatePdfContent(data) {
+        const pdfContentDiv = document.createElement('div');
+        pdfContentDiv.className = 'pdf-render-container'; // Скрытый контейнер
+        document.body.appendChild(pdfContentDiv);
+
+        let html = '<h1 class="pdf-section-title">Опросный лист по техпроцессу</h1>';
+        html += '<h2 class="pdf-h5">Основные сведения</h2>';
+        html += `<div class="pdf-field-display"><strong>Дата заполнения:</strong> ${data.date || 'Не указано'}</div>`;
+        html += `<div class="pdf-field-display"><strong>Название компании:</strong> ${data.company || 'Не указано'}</div>`;
+        html += `<div class="pdf-field-display"><strong>Контактное лицо:</strong> ${data.contact_person || 'Не указано'}</div>`;
+        html += `<div class="pdf-field-display"><strong>Телефон:</strong> ${data.phone || 'Не указано'}</div>`;
+        html += `<div class="pdf-field-display"><strong>Email:</strong> ${data.email || 'Не указано'}</div>`;
+        html += `<div class="pdf-field-display"><strong>Страна:</strong> ${data.country || 'Не указано'}</div>`;
+        html += `<div class="pdf-field-display"><strong>Местонахождение:</strong> ${data.location || 'Не указано'}</div>`;
+        html += `<div class="pdf-field-display"><strong>Тип анализируемого материала:</strong> ${document.getElementById('material').options[document.getElementById('material').selectedIndex].text || 'Не выбрано'}</div>`;
+
+        const selectedMaterial = data.material;
+        if (selectedMaterial) {
+            html += `<h2 class="pdf-section-title">${document.getElementById('material').options[document.getElementById('material').selectedIndex].text}</h2>`;
+
+            // Общие поля для всех анализаторов пульпы
+            const materialPrefix = selectedMaterial; // pulp, multiplex, courier, sinter
+
+            // Динамические элементы
+            const elementsCaU = dynamicElementData[`${materialPrefix}-elements-ca-u`] || [];
+            const lightElements = dynamicElementData[`${materialPrefix}-light-elements`] || [];
+
+            if (elementsCaU.length > 0 && elementsCaU.some(e => e.element || e.range)) {
+                html += `<h5 class="pdf-sub-section-title">Анализируемые элементы от Ca до U + диапазон концентраций</h5>`;
+                elementsCaU.forEach(item => {
+                    if (item.element || item.range) {
+                        html += `<div class="pdf-field-display">${item.element} (Диапазон: ${item.range})</div>`;
+                    }
+                });
+            }
+
+            if (lightElements.length > 0 && lightElements.some(e => e.element || e.range)) {
+                html += `<h5 class="pdf-sub-section-title">Анализ легких химических элементов</h5>`;
+                lightElements.forEach(item => {
+                    if (item.element || item.range) {
+                        html += `<div class="pdf-field-display">${item.element} (Диапазон: ${item.range})</div>`;
+                    }
+                });
+            }
+
+            // Specific fields based on material type
+            switch (selectedMaterial) {
+                case 'pulp':
+                    html += `<div class="pdf-field-display"><strong>Количество точек для анализа:</strong> ${data.pulp_streams || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Характеристика подачи питания:</strong> ${data.pulp_feed_type || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Диаметр:</strong> ${data.pulp_diameter || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Материал:</strong> ${data.pulp_material_type || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Давление нагнетания / Угол разгрузки:</strong> ${data.pulp_pressure_angle || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Температура окружающей среды:</strong> ${data.pulp_temperature || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Плотность:</strong> ${data.pulp_density || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Время измерения:</strong> ${data.pulp_measurement_time || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Наличие тяжёлых металлов в пульпе:</strong> ${data.pulp_heavy_metals || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Состав жидкой фазы:</strong> ${data.pulp_liquid_phase || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Перечень используемых реагентов:</strong> ${data.pulp_reagents || 'Не указано'}</div>`;
+                    html += `<h5 class="pdf-sub-section-title">Дополнительные условия</h5>`;
+                    html += `<div class="pdf-field-display"><strong>Наличие РФА-лаборатории:</strong> ${data.xrf_lab_pulp ? 'Да' : 'Нет'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Допуск персонала к источникам:</strong> ${data.personnel_access_pulp ? 'Да' : 'Нет'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Наличие локальной сети:</strong> ${data.local_network_pulp ? 'Да' : 'Нет'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Местонахождение установки:</strong> ${data.installation_location_pulp || 'Не указано'}</div>`;
+                    if (data.installation_photo_pulp_base64) {
+                         html += `<img src="${data.installation_photo_pulp_base64}" style="max-width: 100%; height: auto; margin-top: 10px;">`;
+                    }
+                    html += `<div class="pdf-field-display"><strong>Состав оборотной воды:</strong> ${data.water_composition_pulp || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Наличие видеонаблюдения:</strong> ${data.video_surveillance_pulp ? 'Да' : 'Нет'}</div>`;
+                    break;
+                case 'sinter':
+                    html += `<div class="pdf-field-display"><strong>Рассматриваются анализаторы:</strong> ${data.sinter_analyzer_type || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Скорость ленты:</strong> ${data.sinter_belt_speed || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Нагрузка на ленте:</strong> ${data.sinter_belt_load || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Размер кусков:</strong> ${data.sinter_grain_size || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Плотность:</strong> ${data.sinter_density || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Время измерения:</strong> ${data.sinter_measurement_time || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Наличие тяжёлых металлов в шихте:</strong> ${data.sinter_heavy_metals || 'Не указано'}</div>`;
+                    html += `<h5 class="pdf-sub-section-title">Дополнительные условия</h5>`;
+                    html += `<div class="pdf-field-display"><strong>Наличие РФА-лаборатории:</strong> ${data.xrf_lab_sinter ? 'Да' : 'Нет'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Допуск персонала к источникам:</strong> ${data.personnel_access_sinter ? 'Да' : 'Нет'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Наличие локальной сети:</strong> ${data.local_network_sinter ? 'Да' : 'Нет'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Местонахождение установки:</strong> ${data.installation_location_sinter || 'Не указано'}</div>`;
+                    if (data.installation_photo_sinter_base64) {
+                        html += `<img src="${data.installation_photo_sinter_base64}" style="max-width: 100%; height: auto; margin-top: 10px;">`;
+                    }
+                    html += `<div class="pdf-field-display"><strong>Наличие видеонаблюдения:</strong> ${data.video_surveillance_sinter ? 'Да' : 'Нет'}</div>`;
+                    break;
+                case 'multiplex':
+                    html += `<div class="pdf-field-display"><strong>Количество точек для анализа:</strong> ${data.multiplex_streams || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Расстояния между точками:</strong> ${data.multiplex_distances || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Тип трубы и её характеристики:</strong> ${data.multiplex_pipe_type || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Давление в трубопроводе:</strong> ${data.multiplex_pressure || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Температура окружающей среды:</strong> ${data.multiplex_temperature || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Размер кусков:</strong> ${data.multiplex_grain_size || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Плотность:</strong> ${data.multiplex_density || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Время измерения:</strong> ${data.multiplex_measurement_time || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Наличие тяжёлых металлов:</strong> ${data.multiplex_heavy_metals || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Состав жидкой фазы:</strong> ${data.multiplex_liquid_phase || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Перечень используемых реагентов:</strong> ${data.multiplex_reagents || 'Не указано'}</div>`;
+                    html += `<h5 class="pdf-sub-section-title">Дополнительные условия</h5>`;
+                    html += `<div class="pdf-field-display"><strong>Наличие РФА-лаборатории:</strong> ${data.xrf_lab_multiplex ? 'Да' : 'Нет'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Допуск персонала к источникам:</strong> ${data.personnel_access_multiplex ? 'Да' : 'Нет'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Наличие локальной сети:</strong> ${data.local_network_multiplex ? 'Да' : 'Нет'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Местонахождение установки:</strong> ${data.installation_location_multiplex || 'Не указано'}</div>`;
+                    if (data.installation_photo_multiplex_base64) {
+                        html += `<img src="${data.installation_photo_multiplex_base64}" style="max-width: 100%; height: auto; margin-top: 10px;">`;
+                    }
+                    html += `<div class="pdf-field-display"><strong>Состав оборотной воды:</strong> ${data.water_composition_multiplex || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Наличие видеонаблюдения:</strong> ${data.video_surveillance_multiplex ? 'Да' : 'Нет'}</div>`;
+                    break;
+                case 'courier':
+                    html += `<div class="pdf-field-display"><strong>Наличие существующей системы отбора/доставки проб:</strong> ${data.courier_existing_system || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Планируется ли подключение к существующему мультиплексору:</strong> ${data.courier_connection_plan || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Количество точек для анализа:</strong> ${data.courier_streams || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Температура окружающей среды:</strong> ${data.courier_temperature || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Плотность:</strong> ${data.courier_density || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Время измерения:</strong> ${data.courier_measurement_time || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Наличие тяжёлых металлов в пульпе:</strong> ${data.courier_heavy_metals || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Состав жидкой фазы:</strong> ${data.courier_liquid_phase || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Перечень используемых реагентов:</strong> ${data.courier_reagents || 'Не указано'}</div>`;
+                    html += `<h5 class="pdf-sub-section-title">Дополнительные условия</h5>`;
+                    html += `<div class="pdf-field-display"><strong>Наличие РФА-лаборатории:</strong> ${data.xrf_lab_courier ? 'Да' : 'Нет'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Допуск персонала к источникам:</strong> ${data.personnel_access_courier ? 'Да' : 'Нет'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Наличие локальной сети:</strong> ${data.local_network_courier ? 'Да' : 'Нет'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Местонахождение установки:</strong> ${data.installation_location_courier || 'Не указано'}</div>`;
+                    if (data.installation_photo_courier_base64) {
+                        html += `<img src="${data.installation_photo_courier_base64}" style="max-width: 100%; height: auto; margin-top: 10px;">`;
+                    }
+                    html += `<div class="pdf-field-display"><strong>Состав оборотной воды:</strong> ${data.water_composition_courier || 'Не указано'}</div>`;
+                    html += `<div class="pdf-field-display"><strong>Наличие видеонаблюдения:</strong> ${data.video_surveillance_courier ? 'Да' : 'Нет'}</div>`;
+                    break;
+            }
+        }
+        pdfContentDiv.innerHTML = html;
+        return pdfContentDiv;
+    }
+
+    async function submitForm() {
+        const form = document.getElementById('form');
+        const submitButton = document.getElementById('submit-button');
+        const errorMessage = document.getElementById('error-message');
+        const successMessage = document.getElementById('success-message');
+
+        errorMessage.style.display = 'none';
+        successMessage.style.display = 'none';
+        submitButton.disabled = true;
+
+        if (!form.checkValidity()) {
+            errorMessage.textContent = 'Пожалуйста, заполните все обязательные поля.';
+            errorMessage.style.display = 'block';
+            form.reportValidity(); // Показывает стандартные сообщения валидации
+            submitButton.disabled = false;
+            return;
+        }
+
+        let formData = collectFormDataForPdf(); // Собираем данные для отправки и PDF
+
+        // Обработка изображений: чтение файлов и кодирование в Base64
+        const imageInputs = [
+            { id: 'installation_photo_pulp', name: 'installation_photo_pulp_base64' },
+            { id: 'installation_photo_sinter', name: 'installation_photo_sinter_base64' },
+            { id: 'installation_photo_multiplex', name: 'installation_photo_multiplex_base64' },
+            { id: 'installation_photo_courier', name: 'installation_photo_courier_base64' }
+        ];
+
+        for (const imgInput of imageInputs) {
+            const inputElement = document.getElementById(imgInput.id);
+            if (inputElement && inputElement.files && inputElement.files[0]) {
+                const file = inputElement.files[0];
+                await new Promise(resolve => {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        formData[imgInput.name] = reader.result;
+                        resolve();
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+        }
+
+        // Подготовка данных для Google Sheets
+        const sheetData = {
+            timestamp: new Date().toLocaleString(),
+            date: formData.date,
+            company: formData.company,
+            contact_person: formData.contact_person,
+            phone: formData.phone,
+            email: formData.email,
+            country: formData.country,
+            location: formData.location,
+            material_type: document.getElementById('material').options[document.getElementById('material').selectedIndex].text,
+            // Добавляем все поля, специфичные для выбранного типа материала, и динамические элементы
+            ...formData,
+            // Удаляем сырые данные файлов, так как мы отправили их в base64
+            installation_photo_pulp: undefined,
+            installation_photo_sinter: undefined,
+            installation_photo_multiplex: undefined,
+            installation_photo_courier: undefined
+        };
+
+        // Специальная обработка динамических элементов для Google Sheets
+        ['elements-ca-u', 'light-elements', 'sinter-elements-ca-u', 'multiplex-elements-ca-u', 'multiplex-light-elements', 'courier-elements-ca-u', 'courier-light-elements'].forEach(id => {
+            if (sheetData[id]) {
+                sheetData[id] = sheetData[id].map(item => `${item.element || ''} (${item.range || ''})`).filter(String).join('; ');
+            }
+        });
+
+        let pdfBlob = null;
+        if (document.getElementById('sendPdf').checked) {
+            try {
+                const pdfContentDiv = await generatePdfContent(formData); // Используем formData, чтобы PDF мог включать Base64 изображения
+                const opt = {
+                    margin: 10,
+                    filename: 'Опросный_лист.pdf',
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2 },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                };
+                const pdf = await html2pdf().from(pdfContentDiv).set(opt).outputPdf('bloburl');
+                // Для EmailJS нужен Blob
+                pdfBlob = await fetch(pdf).then(res => res.blob());
+                document.body.removeChild(pdfContentDiv); // Удаляем скрытый контейнер после генерации
+            } catch (error) {
+                console.error("Ошибка при генерации PDF:", error);
+                errorMessage.textContent = 'Ошибка при создании PDF. Пожалуйста, попробуйте еще раз.';
+                errorMessage.style.display = 'block';
+                submitButton.disabled = false;
+                return;
+            }
+        }
+
+        // Отправка данных в Google Таблицу через Google Apps Script
+        try {
+            const response = await fetch(GOOGLE_SHEET_MACRO_URL, {
+                method: 'POST',
+                mode: 'cors', // Важно для кросс-доменных запросов
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(sheetData)
+            });
+
+            if (!response.ok) {
+                throw new Error(`Ошибка HTTP: ${response.status} ${response.statusText}`);
+            }
+
+            const result = await response.json();
+            if (result.status === 'success') {
+                successMessage.textContent = 'Данные успешно отправлены в Google Таблицу!';
+                successMessage.style.display = 'block';
+                form.reset(); // Очистить форму после успешной отправки
+                document.querySelectorAll('.analyzer-section').forEach(section => {
+                    section.style.display = 'none'; // Скрыть все секции
+                });
+                document.querySelectorAll('img[id^="installation_preview"]').forEach(img => {
+                    img.style.display = 'none';
+                    img.src = '';
+                });
+                // Очищаем динамические данные
+                for (const containerId in dynamicElementData) {
+                    dynamicElementData[containerId] = [];
+                    document.getElementById(containerId).innerHTML = '';
+                    addElementRow(containerId); // Добавить пустую строку после сброса
+                }
+            } else {
+                errorMessage.textContent = `Ошибка при записи данных в Google Таблицу: ${result.message || 'Неизвестная ошибка'}`;
+                errorMessage.style.display = 'block';
+            }
+        } catch (error) {
+            console.error('Ошибка при отправке данных в Google Таблицу:', error);
+            errorMessage.textContent = `Ошибка при отправке данных в Google Таблицу: ${error.message}`;
+            errorMessage.style.display = 'block';
+        } finally {
+            submitButton.disabled = false;
+        }
+
+        // Отправка EmailJS (не зависит от Google Sheets)
+        if (pdfBlob) {
+            const file = new File([pdfBlob], "Опросный_лист.pdf", { type: "application/pdf" });
+
+            const templateParams = {
+                // Все поля формы, которые вы хотите включить в EmailJS
+                company: formData.company,
+                email: formData.email,
+                message: "См. прикрепленный опросный лист в формате PDF.",
+                // ... другие поля, если нужны в шаблоне EmailJS
+            };
+
+            // Преобразование Blob в Base64 для EmailJS вложения
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onloadend = function() {
+                templateParams.attachment = reader.result.split(',')[1]; // Base64 без префикса data:application/pdf;base64,
+                templateParams.attachment_name = "Опросный_лист.pdf";
+
+                emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, templateParams)
+                    .then(function(response) {
+                        console.log('EmailJS отправлен успешно!', response.status, response.text);
+                    }, function(error) {
+                        console.error('Ошибка при отправке EmailJS:', error);
+                        // Опционально: показать сообщение об ошибке EmailJS, если оно критично
+                    });
+            };
+        }
+    }
+
+    document.getElementById('submit-button').addEventListener('click', submitForm);
+
+    // Инициализация формы при загрузке страницы
+    document.addEventListener('DOMContentLoaded', () => {
+        // Добавляем по одной пустой строке для каждого динамического раздела при загрузке
+        containers.forEach(containerId => {
+            addElementRow(containerId);
+        });
+    });
+
+</script>
 </body>
 </html>
