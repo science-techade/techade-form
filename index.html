@@ -7,18 +7,6 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
-    <!-- EmailJS SDK -->
-    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-    <script type="text/javascript">
-        // Инициализация EmailJS с вашим публичным ключом.
-        // Замените 'YOUR_PUBLIC_KEY' на ваш фактический Public Key из EmailJS.
-        // Вы можете найти его в разделе "Account" -> "API Keys" в вашей учетной записи EmailJS.
-        (function() {
-            emailjs.init({
-                publicKey: "Q4JqT6qGqR6-xP8d0" // <-- ВАШ ПУБЛИЧНЫЙ КЛЮЧ EmailJS ЗДЕСЬ!
-            });
-        })();
-    </script>
     <style>
         /* Общие стили для динамически добавляемых строк элементов */
         .element-row {
@@ -481,7 +469,6 @@
             </div>
         </div>
         <div class="mb-3 mt-4">
-            <!-- New checkboxes for attachment control -->
             <div class="form-check attachment-checkbox">
                 <input class="form-check-input" type="checkbox" id="sendPdf" checked>
                 <label class="form-check-label" for="sendPdf">Отправить PDF вложение</label>
@@ -501,12 +488,9 @@
 </div>
 
 <script>
-    // Идентификаторы EmailJS. Замените их на свои, полученные после настройки EmailJS.
-    // Если вы не видите эти ключи, это нормально, пока вы не настроите EmailJS.
-    // Они будут использоваться в функции submitForm.
-    const EMAILJS_SERVICE_ID = 'service_1rnpxea'; // Ваш Service ID из EmailJS
-    const EMAILJS_TEMPLATE_ID = 'template_sk137ts'; // Ваш Template ID из EmailJS (для вашей формы)
-    const APPS_SCRIPT_RECIPIENT_EMAIL = 'YOUR_APPS_SCRIPT_EMAIL_ADDRESS_HERE'; // <-- ВАЖНО: Email адрес, который вы получите из Google Apps Script!
+    // URL для вашего Google Apps Script Web App.
+    // ЗАМЕНИТЕ ЭТОТ PLACEHOLDER НА ФАКТИЧЕСКИЙ URL ВАШЕГО WEB-ПРИЛОЖЕНИЯ GOOGLE APPS SCRIPT ПОСЛЕ РАЗВЕРТЫВАНИЯ!
+    const GOOGLE_SHEET_WEB_APP_URL = 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE'; 
 
     const dynamicElementData = {};
 
@@ -659,7 +643,6 @@
         });
     }
 
-    // Эта функция больше не используется.
     function generateExcelBlob() {
         const form = document.getElementById("form");
         const material = form.material.value;
@@ -907,6 +890,48 @@
         return pdfBlob;
     }
 
+    async function sendToGoogleSheet(formData, pdfBase64, excelBase64, installationPhotoDataUrl) {
+        if (!GOOGLE_SHEET_WEB_APP_URL || GOOGLE_SHEET_WEB_APP_URL === 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE') {
+            console.error("GOOGLE_SHEET_WEB_APP_URL не установлен или использует placeholder. Отправка в Google Sheet пропущена. Пожалуйста, обновите URL в коде Canvas.");
+            alert("Ошибка: URL для Google Таблицы не настроен. Пожалуйста, обновите код Canvas с правильным URL веб-приложения Google Apps Script.");
+            return;
+        }
+        console.log("sendToGoogleSheet: Attempting to send data to Google Sheet.");
+
+        const payload = {
+            ...formData,
+            pdf_attachment_base64: pdfBase64 || '', 
+            excel_attachment_base64: excelBase64 || '', // Добавлено Excel вложение
+            installation_photo_base64: installationPhotoDataUrl || ''
+        };
+
+        try {
+            console.log("sendToGoogleSheet: Sending data:", payload);
+            const response = await fetch(GOOGLE_SHEET_WEB_APP_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
+
+            console.log("sendToGoogleSheet: Request sent. Response:", response);
+            // Если ответ OK, значит, данные, вероятно, дошли.
+            if (response.ok) {
+                console.log("sendToGoogleSheet: Response OK. Data likely sent.");
+                alert("Данные отправлены в Google Таблицу!"); // Уведомление об успешной отправке в Таблицу
+            } else {
+                const errorText = await response.text();
+                console.error("sendToGoogleSheet: Response not OK. Status:", response.status, "Text:", errorText);
+                alert(`Ошибка при отправке данных в Google Таблицу: ${response.status} - ${errorText}.`);
+            }
+
+        } catch (error) {
+            console.error("sendToGoogleSheet: Error sending to Google Sheet:", error);
+            alert("Ошибка при отправке данных в Google Таблицу. Проверьте консоль для деталей.");
+        }
+    }
+
     async function submitForm() {
         console.log("submitForm: Function started.");
         const form = document.getElementById("form");
@@ -932,46 +957,36 @@
         const email = emailInput.value;
         const material = materialSelect.value;
 
-        let pdfBase64 = ''; // Initialize as empty string
-        let installationPhotoDataUrl = ''; // Initialize as empty string
-        let excelBase64 = ''; // Для Excel файла
+        let pdfBase64 = ''; 
+        let installationPhotoDataUrl = ''; 
+        let excelBase64 = ''; 
+        let formDataForGoogleSheet = {};
 
         try {
-            // Collect all form data for EmailJS template
-            let templateParams = {};
+            // Collect general form data
             const formElements = form.elements;
             for (let i = 0; i < formElements.length; i++) {
                 const element = formElements[i];
-                if (element.name && element.tagName !== 'BUTTON') {
-                    if (element.type === 'file') {
-                        // Файлы будут обрабатываться отдельно как вложения
-                        continue; 
-                    } else if (element.type === 'checkbox') {
-                        templateParams[element.name] = element.checked ? "Да" : "Нет";
-                    } else if (element.tagName === 'SELECT') {
-                         templateParams[element.name] = element.options[element.selectedIndex]?.text || element.value || '';
-                    }
-                    else {
-                        templateParams[element.name] = element.value;
-                    }
+                if (element.name && element.type !== 'file' && element.tagName !== 'BUTTON' && element.type !== 'checkbox' && element.type !== 'hidden') {
+                    formDataForGoogleSheet[element.name] = element.value;
+                } else if (element.type === 'checkbox' && element.name) {
+                    formDataForGoogleSheet[element.name] = element.checked;
                 }
             }
-            console.log("submitForm: General form data collected for EmailJS.");
+            console.log("submitForm: General form data collected.");
 
-            // Add dynamic elements data as stringified JSON
+            // Get dynamic elements data
             const allDynamicContainers = Array.from(document.querySelectorAll('div[id$="elements-ca-u"], div[id$="light-elements"], div[id$="sinter-elements-ca-u"], div[id$="multiplex-elements-ca-u"], div[id$="multiplex-light-elements"], div[id$="courier-elements-ca-u"], div[id$="courier-light-elements"]')).map(el => el.id);
             allDynamicContainers.forEach(id => {
-                saveDynamicValues(id); // Ensure latest dynamic values are saved
+                saveDynamicValues(id); 
                 const dynamicElements = dynamicElementData[id];
                 if (dynamicElements && dynamicElements.length > 0) {
-                    templateParams[id] = JSON.stringify(dynamicElements); 
-                } else {
-                    templateParams[id] = 'Нет данных'; // Если нет динамических элементов
+                    formDataForGoogleSheet[id] = JSON.stringify(dynamicElements); 
                 }
             });
-            console.log("submitForm: Dynamic elements data collected for EmailJS.");
+            console.log("submitForm: Dynamic elements data collected.");
 
-            // Get installation photo data for attachment
+            // Get the current material type to retrieve the correct photo data
             const currentMaterialSection = document.querySelector(`.analyzer-section[style*="block"]`);
             if (currentMaterialSection) {
                 const photoInput = currentMaterialSection.querySelector('input[type="file"]');
@@ -997,27 +1012,27 @@
                             console.log("submitForm: PDF Base64 generated. Length:", pdfBase64.length);
                         } else {
                             console.error("submitForm: PDF Base64 is null or empty after conversion. PDF will not be attached.");
-                            alert("Внимание: PDF-файл не был сгенерирован (конвертация в Base64 не удалась). Он не будет прикреплен к письму.");
+                            alert("Внимание: PDF-файл не был сгенерирован (конвертация в Base64 не удалась).");
                             pdfBase64 = ''; 
                         }
                     } else {
-                        console.error("submitForm: generatePDFBlob returned null. PDF will not be attached.");
-                        alert("Внимание: PDF-файл не был сгенерирован. Он не будет прикреплен к письму.");
+                        console.error("submitForm: generatePDFBlob returned null.");
+                        alert("Внимание: PDF-файл не был сгенерирован.");
                         pdfBase64 = ''; 
                     }
                 } catch (pdfGenError) {
                     console.error("submitForm: Error during PDF generation or Base64 conversion:", pdfGenError);
-                    alert(`Внимание: Ошибка при генерации PDF: ${pdfGenError.message}. Он не будет прикреплен к письму.`);
+                    alert(`Внимание: Ошибка при генерации PDF: ${pdfGenError.message}.`);
                     pdfBase64 = ''; 
                 }
             } else {
                 console.log("submitForm: sendPdfCheckbox is NOT checked. Skipping PDF generation.");
                 pdfBase64 = ''; 
             }
-
+            
             // Генерация Excel Blob и конвертация в Base64
             console.log("submitForm: Calling generateExcelBlob to prepare Excel attachment.");
-            const generatedExcelBlob = generateExcelBlob(); // Используем синхронную функцию
+            const generatedExcelBlob = generateExcelBlob(); 
             if (generatedExcelBlob) {
                 const convertedExcelBase64 = await blobToBase64(generatedExcelBlob);
                 if (convertedExcelBase64 && convertedExcelBase64.length > 0) {
@@ -1025,74 +1040,31 @@
                     console.log("submitForm: Excel Base64 generated. Length:", excelBase64.length);
                 } else {
                     console.error("submitForm: Excel Base64 is null or empty after conversion. Excel will not be attached.");
-                    alert("Внимание: Excel-файл не был сгенерирован (конвертация в Base64 не удалась). Он не будет прикреплен к письму.");
+                    alert("Внимание: Excel-файл не был сгенерирован (конвертация в Base64 не удалась).");
                     excelBase64 = '';
                 }
             } else {
-                console.error("submitForm: generateExcelBlob returned null. Excel will not be attached.");
-                alert("Внимание: Excel-файл не был сгенерирован. Он не будет прикреплен к письму.");
+                console.error("submitForm: generateExcelBlob returned null.");
+                alert("Внимание: Excel-файл не был сгенерирован.");
                 excelBase64 = '';
             }
 
-            // --- Отправка через EmailJS ---
-            console.log("submitForm: Attempting to send data via EmailJS.");
-
-            // Параметры для шаблона EmailJS.
-            // to_email - это email, на который будет отправлено письмо.
-            // Мы передадим специальный email-адрес Apps Script, который будет обрабатывать письмо.
-            const emailJsTemplateParams = {
-                to_email: APPS_SCRIPT_RECIPIENT_EMAIL, // <-- Очень важно: это будет email Apps Script
-                from_company: templateParams.company || 'N/A',
-                from_email: templateParams.email || 'N/A',
-                from_date: templateParams.date || 'N/A',
+            // --- Отправка в Google Sheet ---
+            const googleSheetPayload = {
+                // Основные поля и динамические элементы собираются из formDataForGoogleSheet
+                ...formDataForGoogleSheet,
                 
-                // Чтобы отправить все данные формы в текстовом виде в теле письма,
-                // мы сериализуем templateParams (которая содержит все поля)
-                // и передадим ее как один параметр в шаблон.
-                full_form_data: JSON.stringify(templateParams, null, 2), // Отправляем все данные формы как JSON строку
+                // Base64 вложения
+                pdf_attachment_base64: pdfBase64, 
+                excel_attachment_base64: excelBase64, 
+                installation_photo_base64: installationPhotoDataUrl
             };
 
-            // Собираем вложения
-            const attachments = [];
-            if (pdfBase64 && sendPdfCheckbox.checked) {
-                attachments.push({
-                    name: "Опросный лист.pdf",
-                    data: pdfBase64,
-                    type: "application/pdf"
-                });
-            }
-            if (excelBase64) { // Excel всегда прикрепляем, если сгенерирован
-                attachments.push({
-                    name: "Опросный лист.xlsx",
-                    data: excelBase64,
-                    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
-                });
-            }
-            if (installationPhotoDataUrl) {
-                // EmailJS принимает Base64 без "data:image/..." префикса
-                const base64Content = installationPhotoDataUrl.split(',')[1];
-                let photoMimeType = 'image/png'; // По умолчанию
-                if (installationPhotoDataUrl.startsWith('data:image/jpeg')) {
-                    photoMimeType = 'image/jpeg';
-                }
-                attachments.push({
-                    name: "Фото местонахождения.png", // Или .jpg
-                    data: base64Content,
-                    type: photoMimeType
-                });
-            }
+            console.log("submitForm: Отправка данных в Google Apps Script."); 
+            await sendToGoogleSheet(googleSheetPayload, pdfBase64, excelBase64, installationPhotoDataUrl); 
+            console.log("submitForm: sendToGoogleSheet called.");
 
-            await emailjs.send(
-                EMAILJS_SERVICE_ID,
-                EMAILJS_TEMPLATE_ID,
-                emailJsTemplateParams,
-                { attachments: attachments }
-            );
-
-            alert("Опросный лист успешно отправлен на ваш Email!");
-            console.log("submitForm: EmailJS отправка завершена.");
-
-            // Здесь можно очистить форму после успешной отправки
+            // Очистка формы после успешной отправки
             form.reset();
             showAnalyzerSection(''); // Скрыть все секции
             containers.forEach(id => {
@@ -1105,8 +1077,8 @@
             });
 
         } catch (err) {
-            console.error("submitForm: Критическая ошибка при отправке формы через EmailJS:", err);
-            errorMessageDiv.textContent = `Критическая ошибка: ${err.message || "Неизвестная ошибка."} Пожалуйста, попробуйте еще раз или обратитесь в поддержку EmailJS.`;
+            console.error("submitForm: Критическая ошибка при обработке формы:", err);
+            errorMessageDiv.textContent = `Критическая ошибка: ${err.message || "Неизвестная ошибка."} Пожалуйста, попробуйте еще раз.`;
             errorMessageDiv.style.display = 'block';
         }
     }
@@ -1153,119 +1125,3 @@
     </script>
 </body>
 </html>
-```
-
-### **Шаг 2: Создайте НОВУЮ Google Таблицу и Apps Script для обработки Email**
-
-**Пожалуйста, создайте АБСОЛЮТНО новую таблицу и скрипт, чтобы избежать любых старых кэшированных разрешений.**
-
-1.  **Создайте НОВУЮ Google Таблицу:**
-    * Откройте Google Диск (drive.google.com).
-    * Нажмите **`+ Создать`** (New) -> **`Google Таблицы`** (Google Sheets).
-    * Назовите её, например, **"Данные Опросного Листа - Email"**.
-    * **Вставьте ЗАГОЛОВКИ СТОЛБЦОВ** из артефакта `google-sheet-column-headers` в первую строку новой таблицы. Это очень важно для корректного сопоставления данных. Убедитесь, что все заголовки скопированы правильно.
-
-2.  **Откройте НОВЫЙ редактор Apps Script:**
-    * В этой **новой** Google Таблице перейдите в меню **`Расширения`** (Extensions) -> **`Apps Script`**.
-    * Откроется новая вкладка с **абсолютно новым, пустым проектом Apps Script**. Назовите его, например, "Обработчик писем формы".
-
-3.  **Вставьте КОД Google Apps Script для обработки Email:**
-    * Удалите весь существующий код в этом новом проекте.
-    * Вставьте следующий код в `Code.gs`:
-
-
-```javascript
-// Этот скрипт получает электронные письма, отправленные EmailJS,
-// парсит данные формы из тела письма (включая Base64 вложения)
-// и записывает их в активную Google Таблицу.
-
-function processIncomingFormEmail(e) {
-  Logger.log("Email received! Subject: " + e.subject);
-  Logger.log("Email body (plain text): " + e.plainBody);
-
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-  var headers = sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0];
-  var rowData = [];
-  rowData.push(new Date()); // Отметка времени
-
-  try {
-    // 1. Попытка извлечь JSON строку с полными данными формы из тела письма
-    var jsonStartIndex = e.plainBody.indexOf("Полные данные формы (JSON):\n");
-    var formData = {};
-
-    if (jsonStartIndex !== -1) {
-      var jsonString = e.plainBody.substring(jsonStartIndex + "Полные данные формы (JSON):\n".length);
-      // Очищаем JSON строку от любых лишних символов, добавленных шаблоном (например, ```json)
-      jsonString = jsonString.trim();
-      if (jsonString.startsWith('```json')) {
-        jsonString = jsonString.substring('```json'.length);
-      }
-      if (jsonString.endsWith('```')) {
-        jsonString = jsonString.substring(0, jsonString.length - '```'.length);
-      }
-      jsonString = jsonString.trim();
-
-      formData = JSON.parse(jsonString);
-      Logger.log("Successfully parsed JSON data from email body: " + JSON.stringify(formData));
-    } else {
-      Logger.log("Could not find 'full_form_data' JSON in email body. Attempting to parse direct fields.");
-      // Если JSON не найден, попытаемся извлечь основные поля напрямую
-      // Это менее надежно, но может сработать для простых писем
-      formData.company = (e.plainBody.match(/Компания:\s*(.*)/) || ['', ''])[1].trim();
-      formData.email = (e.plainBody.match(/Email отправителя:\s*(.*)/) || ['', ''])[1].trim();
-      formData.date = (e.plainBody.match(/Дата заполнения:\s*(.*)/) || ['', ''])[1].trim();
-      // Вы можете добавить больше парсеров RegExp для других полей, если необходимо
-      Logger.log("Parsed basic fields from email body: " + JSON.stringify(formData));
-    }
-
-    // 2. Запись данных в Google Таблицу
-    for (var i = 1; i < headers.length; i++) { // Начинаем с 1, так как 0-й столбец - это Timestamp
-      var header = headers[i];
-      var value = formData[header]; // Получаем значение из разобранных данных формы
-
-      if (value !== undefined && value !== null) {
-        // Специальная обработка для JSON строк динамических элементов
-        if (header.includes('-elements') && typeof value === 'string' && value.startsWith('[')) {
-          // Это уже строковый JSON, сохраняем как есть
-          rowData.push(value);
-        }
-        // Base64 вложения НЕ будут в formData, они будут в e.attachments.
-        // Поэтому для полей base64 в таблице мы будем записывать заметку о прикреплении
-        else if (header.endsWith('_base64')) {
-            var attachmentExists = false;
-            if (header === 'pdf_attachment_base64' && e.attachments) {
-                attachmentExists = e.attachments.some(att => att.getName() === 'Опросный лист.pdf');
-            } else if (header === 'excel_attachment_base64' && e.attachments) {
-                attachmentExists = e.attachments.some(att => att.getName() === 'Опросный лист.xlsx');
-            } else if (header === 'installation_photo_base64' && e.attachments) {
-                attachmentExists = e.attachments.some(att => att.getName().startsWith('Фото местонахождения.'));
-            }
-            rowData.push(attachmentExists ? 'Прикреплено к письму' : 'Нет вложения');
-        }
-        else {
-          rowData.push(value);
-        }
-      } else {
-        rowData.push(''); // Если поле отсутствует или равно null
-      }
-    }
-    sheet.appendRow(rowData);
-    Logger.log("Data successfully written to Google Sheet.");
-
-    // 3. Обработка вложений (опционально: сохранение на Google Drive)
-    if (e.attachments && e.attachments.length > 0) {
-      Logger.log("Processing " + e.attachments.length + " attachments from email.");
-      // Пример: сохранение вложений на Google Drive
-      // var targetFolderId = "ВАШ_ID_ПАПКИ_GOOGLE_DRIVE"; // Замените на ID папки, куда сохранять
-      // var folder = DriveApp.getFolderById(targetFolderId);
-      // for (var j = 0; j < e.attachments.length; j++) {
-      //   var attachment = e.attachments[j];
-      //   Logger.log("Saving attachment: " + attachment.getName());
-      //   folder.createFile(attachment);
-      // }
-    }
-
-  } catch (error) {
-    Logger.log("Error in processIncomingFormEmail: " + error.toString() + ". Full event: " + JSON.stringify(e));
-  }
-}
