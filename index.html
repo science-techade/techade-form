@@ -7,6 +7,18 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <!-- EmailJS SDK -->
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
+    <script type="text/javascript">
+        // Инициализация EmailJS с вашим публичным ключом.
+        // Замените 'YOUR_PUBLIC_KEY' на ваш фактический Public Key из EmailJS.
+        // Вы можете найти его в разделе "Account" -> "API Keys" в вашей учетной записи EmailJS.
+        (function() {
+            emailjs.init({
+                publicKey: "2p7l9sK9Zfj6c2SXi" // <-- ВАШ ПУБЛИЧНЫЙ КЛЮЧ EmailJS ЗДЕСЬ!
+            });
+        })();
+    </script>
     <style>
         /* Общие стили для динамически добавляемых строк элементов */
         .element-row {
@@ -469,6 +481,7 @@
             </div>
         </div>
         <div class="mb-3 mt-4">
+            <!-- New checkboxes for attachment control -->
             <div class="form-check attachment-checkbox">
                 <input class="form-check-input" type="checkbox" id="sendPdf" checked>
                 <label class="form-check-label" for="sendPdf">Отправить PDF вложение</label>
@@ -488,9 +501,13 @@
 </div>
 
 <script>
-    // URL для вашего Google Apps Script Web App.
-    // ЗАМЕНИТЕ ЭТОТ PLACEHOLDER НА ФАКТИЧЕСКИЙ URL ВАШЕГО WEB-ПРИЛОЖЕНИЯ GOOGLE APPS SCRIPT ПОСЛЕ РАЗВЕРТЫВАНИЯ!
-    const GOOGLE_SHEET_WEB_APP_URL = 'https://script.google.com/macros/s/AKfycbzxrkgJSbONC387JQm3KvhE4B5tODujnMGcN8kXsESmCBauNR9W9F2tbSV1izMaz-4A/exec'; 
+    // Идентификаторы EmailJS. Замените их на свои, полученные после настройки EmailJS.
+    // Если вы не видите эти ключи, это нормально, пока вы не настроите EmailJS.
+    // Они будут использоваться в функции submitForm.
+    const EMAILJS_SERVICE_ID = 'service_1rnpxea'; // Ваш Service ID из EmailJS
+    const EMAILJS_TEMPLATE_ID = 'template_sk137ts'; // Ваш Template ID из EmailJS (для вашей формы)
+    // ВАЖНО: Email адрес, который вы получите из Google Apps Script для триггера "При получении нового письма"!
+    const APPS_SCRIPT_RECIPIENT_EMAIL = 'https://script.google.com/macros/s/AKfycbyEzbhpH4nvNXElM6N_krHMJo_GO5ZFWMv21OZzz0OnAE8jRb8c8o0wu2HpL_wfLV2H/exec'; 
 
     const dynamicElementData = {};
 
@@ -890,48 +907,6 @@
         return pdfBlob;
     }
 
-    async function sendToGoogleSheet(formData, pdfBase64, excelBase64, installationPhotoDataUrl) {
-        if (!GOOGLE_SHEET_WEB_APP_URL || GOOGLE_SHEET_WEB_APP_URL === 'YOUR_GOOGLE_APPS_SCRIPT_WEB_APP_URL_HERE') {
-            console.error("GOOGLE_SHEET_WEB_APP_URL не установлен или использует placeholder. Отправка в Google Sheet пропущена. Пожалуйста, обновите URL в коде Canvas.");
-            alert("Ошибка: URL для Google Таблицы не настроен. Пожалуйста, обновите код Canvas с правильным URL веб-приложения Google Apps Script.");
-            return;
-        }
-        console.log("sendToGoogleSheet: Attempting to send data to Google Sheet.");
-
-        const payload = {
-            ...formData,
-            pdf_attachment_base64: pdfBase64 || '', 
-            excel_attachment_base64: excelBase64 || '', // Добавлено Excel вложение
-            installation_photo_base64: installationPhotoDataUrl || ''
-        };
-
-        try {
-            console.log("sendToGoogleSheet: Sending data:", payload);
-            const response = await fetch(GOOGLE_SHEET_WEB_APP_URL, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(payload),
-            });
-
-            console.log("sendToGoogleSheet: Request sent. Response:", response);
-            // Если ответ OK, значит, данные, вероятно, дошли.
-            if (response.ok) {
-                console.log("sendToGoogleSheet: Response OK. Data likely sent.");
-                alert("Данные отправлены в Google Таблицу!"); // Уведомление об успешной отправке в Таблицу
-            } else {
-                const errorText = await response.text();
-                console.error("sendToGoogleSheet: Response not OK. Status:", response.status, "Text:", errorText);
-                alert(`Ошибка при отправке данных в Google Таблицу: ${response.status} - ${errorText}.`);
-            }
-
-        } catch (error) {
-            console.error("sendToGoogleSheet: Error sending to Google Sheet:", error);
-            alert("Ошибка при отправке данных в Google Таблицу. Проверьте консоль для деталей.");
-        }
-    }
-
     async function submitForm() {
         console.log("submitForm: Function started.");
         const form = document.getElementById("form");
@@ -960,33 +935,44 @@
         let pdfBase64 = ''; 
         let installationPhotoDataUrl = ''; 
         let excelBase64 = ''; 
-        let formDataForGoogleSheet = {};
+        let templateParams = {}; // Используем templateParams для сбора всех данных
 
         try {
-            // Collect general form data
+            // Collect all form data for EmailJS template
             const formElements = form.elements;
             for (let i = 0; i < formElements.length; i++) {
                 const element = formElements[i];
-                if (element.name && element.type !== 'file' && element.tagName !== 'BUTTON' && element.type !== 'checkbox' && element.type !== 'hidden') {
-                    formDataForGoogleSheet[element.name] = element.value;
-                } else if (element.type === 'checkbox' && element.name) {
-                    formDataForGoogleSheet[element.name] = element.checked;
+                if (element.name && element.tagName !== 'BUTTON') {
+                    if (element.type === 'file') {
+                        // Файлы будут обрабатываться отдельно как вложения
+                        continue; 
+                    } else if (element.type === 'checkbox') {
+                        templateParams[element.name] = element.checked ? "Да" : "Нет";
+                    } else if (element.tagName === 'SELECT') {
+                         templateParams[element.name] = element.options[element.selectedIndex]?.text || element.value || '';
+                    }
+                    else {
+                        templateParams[element.name] = element.value;
+                    }
                 }
             }
-            console.log("submitForm: General form data collected.");
+            console.log("submitForm: General form data collected for EmailJS.");
 
-            // Get dynamic elements data
+            // Add dynamic elements data as stringified JSON
             const allDynamicContainers = Array.from(document.querySelectorAll('div[id$="elements-ca-u"], div[id$="light-elements"], div[id$="sinter-elements-ca-u"], div[id$="multiplex-elements-ca-u"], div[id$="multiplex-light-elements"], div[id$="courier-elements-ca-u"], div[id$="courier-light-elements"]')).map(el => el.id);
+
             allDynamicContainers.forEach(id => {
-                saveDynamicValues(id); 
+                saveDynamicValues(id); // Ensure latest dynamic values are saved
                 const dynamicElements = dynamicElementData[id];
                 if (dynamicElements && dynamicElements.length > 0) {
-                    formDataForGoogleSheet[id] = JSON.stringify(dynamicElements); 
+                    templateParams[id] = JSON.stringify(dynamicElements); 
+                } else {
+                    templateParams[id] = 'Нет данных'; // Если нет динамических элементов
                 }
             });
-            console.log("submitForm: Dynamic elements data collected.");
+            console.log("submitForm: Dynamic elements data collected for EmailJS.");
 
-            // Get the current material type to retrieve the correct photo data
+            // Get installation photo data for attachment
             const currentMaterialSection = document.querySelector(`.analyzer-section[style*="block"]`);
             if (currentMaterialSection) {
                 const photoInput = currentMaterialSection.querySelector('input[type="file"]');
@@ -1012,27 +998,27 @@
                             console.log("submitForm: PDF Base64 generated. Length:", pdfBase64.length);
                         } else {
                             console.error("submitForm: PDF Base64 is null or empty after conversion. PDF will not be attached.");
-                            alert("Внимание: PDF-файл не был сгенерирован (конвертация в Base64 не удалась).");
+                            alert("Внимание: PDF-файл не был сгенерирован (конвертация в Base64 не удалась). Он не будет прикреплен к письму.");
                             pdfBase64 = ''; 
                         }
                     } else {
-                        console.error("submitForm: generatePDFBlob returned null.");
-                        alert("Внимание: PDF-файл не был сгенерирован.");
+                        console.error("submitForm: generatePDFBlob returned null. PDF will not be attached.");
+                        alert("Внимание: PDF-файл не был сгенерирован. Он не будет прикреплен к письму.");
                         pdfBase64 = ''; 
                     }
                 } catch (pdfGenError) {
                     console.error("submitForm: Error during PDF generation or Base64 conversion:", pdfGenError);
-                    alert(`Внимание: Ошибка при генерации PDF: ${pdfGenError.message}.`);
+                    alert(`Внимание: Ошибка при генерации PDF: ${pdfGenError.message}. Он не будет прикреплен к письму.`);
                     pdfBase64 = ''; 
                 }
             } else {
                 console.log("submitForm: sendPdfCheckbox is NOT checked. Skipping PDF generation.");
                 pdfBase64 = ''; 
             }
-            
+
             // Генерация Excel Blob и конвертация в Base64
             console.log("submitForm: Calling generateExcelBlob to prepare Excel attachment.");
-            const generatedExcelBlob = generateExcelBlob(); 
+            const generatedExcelBlob = generateExcelBlob(); // Используем синхронную функцию
             if (generatedExcelBlob) {
                 const convertedExcelBase64 = await blobToBase64(generatedExcelBlob);
                 if (convertedExcelBase64 && convertedExcelBase64.length > 0) {
@@ -1040,31 +1026,77 @@
                     console.log("submitForm: Excel Base64 generated. Length:", excelBase64.length);
                 } else {
                     console.error("submitForm: Excel Base64 is null or empty after conversion. Excel will not be attached.");
-                    alert("Внимание: Excel-файл не был сгенерирован (конвертация в Base64 не удалась).");
+                    alert("Внимание: Excel-файл не был сгенерирован (конвертация в Base64 не удалась). Он не будет прикреплен к письму.");
                     excelBase64 = '';
                 }
             } else {
-                console.error("submitForm: generateExcelBlob returned null.");
-                alert("Внимание: Excel-файл не был сгенерирован.");
+                console.error("submitForm: generateExcelBlob returned null. Excel will not be attached.");
+                alert("Внимание: Excel-файл не был сгенерирован. Он не будет прикреплен к письму.");
                 excelBase64 = '';
             }
 
-            // --- Отправка в Google Sheet ---
-            const googleSheetPayload = {
-                // Основные поля и динамические элементы собираются из formDataForGoogleSheet
-                ...formDataForGoogleSheet,
+            // --- Отправка через EmailJS ---
+            console.log("submitForm: Attempting to send data via EmailJS.");
+
+            // Параметры для шаблона EmailJS.
+            // to_email - это email, на который будет отправлено письмо.
+            // Мы передадим специальный email-адрес Apps Script, который будет обрабатывать письмо.
+            const emailJsTemplateParams = {
+                to_email: APPS_SCRIPT_RECIPIENT_EMAIL, // <-- Очень важно: это будет email Apps Script
+                from_company: templateParams.company || 'N/A',
+                from_email: templateParams.email || 'N/A',
+                from_date: templateParams.date || 'N/A',
                 
-                // Base64 вложения
-                pdf_attachment_base64: pdfBase64, 
-                excel_attachment_base64: excelBase64, 
-                installation_photo_base64: installationPhotoDataUrl
+                // Чтобы отправить все данные формы в текстовом виде в теле письма,
+                // мы сериализуем templateParams (которая содержит все поля)
+                // и передадим ее как один параметр в шаблон.
+                full_form_data: JSON.stringify(templateParams, null, 2), // Отправляем все данные формы как JSON строку
             };
 
-            console.log("submitForm: Отправка данных в Google Apps Script."); 
-            await sendToGoogleSheet(googleSheetPayload, pdfBase64, excelBase64, installationPhotoDataUrl); 
-            console.log("submitForm: sendToGoogleSheet called.");
+            // Собираем вложения
+            const attachments = [];
+            if (pdfBase64 && sendPdfCheckbox.checked) {
+                attachments.push({
+                    name: "Опросный_лист.pdf", // Имя файла для Apps Script
+                    data: pdfBase64,
+                    type: "application/pdf"
+                });
+            }
+            if (excelBase64) { 
+                attachments.push({
+                    name: "Опросный_лист.xlsx", // Имя файла для Apps Script
+                    data: excelBase64,
+                    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+                });
+            }
+            if (installationPhotoDataUrl) {
+                // EmailJS принимает Base64 без "data:image/..." префикса
+                const base64Content = installationPhotoDataUrl.split(',')[1];
+                let photoMimeType = 'image/png'; // По умолчанию
+                let photoFilename = 'Фото_местонахождения.png';
 
-            // Очистка формы после успешной отправки
+                if (installationPhotoDataUrl.startsWith('data:image/jpeg')) {
+                    photoMimeType = 'image/jpeg';
+                    photoFilename = 'Фото_местонахождения.jpg';
+                }
+                attachments.push({
+                    name: photoFilename, // Имя файла для Apps Script
+                    data: base64Content,
+                    type: photoMimeType
+                });
+            }
+
+            await emailjs.send(
+                EMAILJS_SERVICE_ID,
+                EMAILJS_TEMPLATE_ID,
+                emailJsTemplateParams,
+                { attachments: attachments }
+            );
+
+            alert("Опросный лист успешно отправлен на ваш Email (для обработки Apps Script)!");
+            console.log("submitForm: EmailJS отправка завершена.");
+
+            // Здесь можно очистить форму после успешной отправки
             form.reset();
             showAnalyzerSection(''); // Скрыть все секции
             containers.forEach(id => {
@@ -1077,8 +1109,8 @@
             });
 
         } catch (err) {
-            console.error("submitForm: Критическая ошибка при обработке формы:", err);
-            errorMessageDiv.textContent = `Критическая ошибка: ${err.message || "Неизвестная ошибка."} Пожалуйста, попробуйте еще раз.`;
+            console.error("submitForm: Критическая ошибка при отправке формы через EmailJS:", err);
+            errorMessageDiv.textContent = `Критическая ошибка: ${err.message || "Неизвестная ошибка."} Пожалуйста, попробуйте еще раз или обратитесь в поддержку EmailJS.`;
             errorMessageDiv.style.display = 'block';
         }
     }
@@ -1104,7 +1136,7 @@
         inputRange.value = "";
         inputRange.oninput = () => saveDynamicValues(containerId);
 
-        const removeBtn = document.createElement("button");
+        const removeBtn = document.createElement("button"); // Исправлено: createElement для кнопки
         removeBtn.type = "button";
             removeBtn.className = "btn btn-outline-danger btn-sm";
             removeBtn.textContent = "Удалить";
